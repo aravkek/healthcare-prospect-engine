@@ -5,3 +5,5 @@ __pycache__/
 medport_prospects.csv
 discovery_runs.log
 .DS_Store
+seeds.csv
+.streamlit/secrets.toml

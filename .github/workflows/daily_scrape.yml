@@ -1,0 +1,38 @@
+name: Daily Prospect Discovery
+
+on:
+  schedule:
+    - cron: "0 13 * * *" # 8am ET (UTC-5) = 13:00 UTC
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt supabase
+
+      - name: Run discovery and sync to Supabase
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          python customer_discovery.py \
+            --country both \
+            --supabase \
+            --output medport_prospects.csv
+
+      - name: Commit updated CSV as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: prospects-${{ github.run_id }}
+          path: medport_prospects.csv
+          retention-days: 30

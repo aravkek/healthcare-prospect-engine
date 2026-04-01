@@ -34,6 +34,17 @@ import requests
 from bs4 import BeautifulSoup
 from dataclasses import dataclass, asdict
 from typing import Optional
+from pathlib import Path
+
+# Load .env file if present (before any os.environ reads)
+_env_path = Path(__file__).parent / ".env"
+if _env_path.exists():
+    with open(_env_path) as _ef:
+        for _line in _ef:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _v = _line.split("=", 1)
+                os.environ.setdefault(_k.strip(), _v.strip())
 
 # ─────────────────────────────────────────────
 # Data model
@@ -67,142 +78,45 @@ class Institution:
 # Stage 1 — Pull institutions from directories
 # ─────────────────────────────────────────────
 
-ONTARIO_UNIVERSITY_HEALTH_CENTRES = [
-    Institution("University of Toronto Health & Wellness", "university", "Toronto", "ON", "CA",
-                "https://studentlife.utoronto.ca/service/health-wellness/", decision_maker_title="Director, Health & Wellness"),
-    Institution("McMaster University Student Wellness Centre", "university", "Hamilton", "ON", "CA",
-                "https://wellness.mcmaster.ca/", decision_maker_name="Cynthia Gibney (intro exists)", decision_maker_title="Director"),
-    Institution("University of Waterloo Campus Wellness", "university", "Waterloo", "ON", "CA",
-                "https://uwaterloo.ca/campus-wellness/", decision_maker_title="Executive Director, Campus Wellness"),
-    Institution("Western University Student Health Services", "university", "London", "ON", "CA",
-                "https://www.uwo.ca/health/", decision_maker_title="Director, Student Health Services"),
-    Institution("Queen's University Student Wellness Services", "university", "Kingston", "ON", "CA",
-                "https://www.queensu.ca/studentwellness/", decision_maker_title="Director, Student Wellness"),
-    Institution("University of Ottawa Health Services", "university", "Ottawa", "ON", "CA",
-                "https://www.uottawa.ca/campus-life/health-wellness/", decision_maker_title="Director, Health Services"),
-    Institution("York University Health Education & Promotion", "university", "Toronto", "ON", "CA",
-                "https://www.yorku.ca/well-u/health/", decision_maker_title="Manager, Health Education"),
-    Institution("Toronto Metropolitan University (TMU) Medical Centre", "university", "Toronto", "ON", "CA",
-                "https://www.torontomu.ca/student-wellbeing/health/", decision_maker_title="Manager, Medical Centre"),
-    Institution("University of Guelph Student Health Services", "university", "Guelph", "ON", "CA",
-                "https://wellness.uoguelph.ca/health/", decision_maker_title="Director, Student Health"),
-    Institution("Brock University Student Health Services", "university", "St. Catharines", "ON", "CA",
-                "https://brocku.ca/student-health-services/", decision_maker_title="Director, Health Services"),
-    Institution("Trent University Health Services", "university", "Peterborough", "ON", "CA",
-                "https://www.trentu.ca/healthservices/", decision_maker_title="Manager, Health Services"),
-    Institution("University of Windsor Student Health Services", "university", "Windsor", "ON", "CA",
-                "https://www.uwindsor.ca/studenthealthservices/", decision_maker_title="Coordinator, Health Services"),
-    Institution("Laurentian University Health Services", "university", "Sudbury", "ON", "CA",
-                "https://laurentian.ca/health-services", decision_maker_title="Health Services Coordinator"),
-    Institution("OCAD University Health & Wellness", "university", "Toronto", "ON", "CA",
-                "https://www.ocadu.ca/student-life/health-wellness", decision_maker_title="Health & Wellness Coordinator"),
-]
+def load_seeds(seeds_file: str = None) -> list[Institution]:
+    """
+    Load seed institutions from a CSV file.
+    Default path: seeds.csv in the same directory as this script.
 
-# Key Ontario community health centres — manually curated top targets
-# Full directory: https://www.chcontario.ca/our-members/
-ONTARIO_CHC_SEED = [
-    Institution("Flemingdon Health Centre", "CHC", "Toronto", "ON", "CA",
-                "https://www.flemingdonhealth.ca/", phone="416-429-4991",
-                decision_maker_title="Executive Director / Director of Programs",
-                research_notes="Demo scheduled April 8, 2026. Large CHC serving immigrant + racialized communities. Known for innovation partnerships."),
-    Institution("Regent Park Community Health Centre", "CHC", "Toronto", "ON", "CA",
-                "https://www.regentparkchc.org/", decision_maker_title="Executive Director"),
-    Institution("Unison Health and Community Services", "CHC", "Toronto", "ON", "CA",
-                "https://unisonhcs.org/", decision_maker_title="Executive Director"),
-    Institution("Black Creek Community Health Centre", "CHC", "Toronto", "ON", "CA",
-                "https://www.bcchc.com/", decision_maker_title="Executive Director"),
-    Institution("Inner City Health Associates", "CHC", "Toronto", "ON", "CA",
-                "https://www.icha-toronto.ca/", decision_maker_title="Medical Director"),
-    Institution("St. Michael's Hospital Academic Family Health Team", "CHC", "Toronto", "ON", "CA",
-                "https://www.stmichaelshospital.com/", decision_maker_title="Program Director"),
-    Institution("Sherbourne Health", "CHC", "Toronto", "ON", "CA",
-                "https://sherbourne.on.ca/", decision_maker_title="Executive Director"),
-    Institution("Access Alliance Multicultural Health and Community Services", "CHC", "Toronto", "ON", "CA",
-                "https://accessalliance.ca/", decision_maker_title="Executive Director"),
-    Institution("Oriole Community Health Team", "CHC", "North York", "ON", "CA",
-                "https://www.oriolefht.ca/", decision_maker_title="Executive Director"),
-    Institution("North York General Family Health Team", "CHC", "North York", "ON", "CA",
-                "https://www.nygh.on.ca/", decision_maker_title="Director, Primary Care"),
-    Institution("Hamilton Urban Core Community Health Centre", "CHC", "Hamilton", "ON", "CA",
-                "https://www.urbancore.ca/", decision_maker_title="Executive Director"),
-    Institution("Waterloo Region Community Health Centre", "CHC", "Kitchener", "ON", "CA",
-                "https://www.communitycare.on.ca/", decision_maker_title="Executive Director"),
-    Institution("Ottawa Community Health Centre", "CHC", "Ottawa", "ON", "CA",
-                "https://www.cscso.ca/", decision_maker_title="Executive Director"),
-    Institution("Centretown Community Health Centre", "CHC", "Ottawa", "ON", "CA",
-                "https://www.centretownchc.org/", decision_maker_title="Executive Director"),
-    Institution("Somerset West Community Health Centre", "CHC", "Ottawa", "ON", "CA",
-                "https://www.swchc.on.ca/", decision_maker_title="Executive Director"),
-    Institution("Bruyère Continuing Care", "CHC", "Ottawa", "ON", "CA",
-                "https://www.bruyere.org/", decision_maker_title="Director, Innovation"),
-    Institution("Niagara Region Community Health Centre", "CHC", "Niagara Falls", "ON", "CA",
-                "https://www.nrchc.ca/", decision_maker_title="Executive Director"),
-    Institution("Planned Parenthood Toronto", "specialty", "Toronto", "ON", "CA",
-                "https://www.ppt.on.ca/", decision_maker_title="Executive Director"),
-]
+    The CSV is kept out of the public repo (listed in .gitignore) so the
+    curated target list stays private.
+    """
+    if seeds_file is None:
+        seeds_file = str(Path(__file__).parent / "seeds.csv")
 
-# Ontario walk-in / independent clinic chains — targets for voice agent
-ONTARIO_WALKIN_SEED = [
-    Institution("Appletree Medical Group", "walk-in", "Ottawa/Toronto", "ON", "CA",
-                "https://appletreemedical.ca/", decision_maker_title="VP Operations / CIO",
-                research_notes="Large multi-site group, 30+ locations. If cracked = major reference customer."),
-    Institution("Medicentres Canada", "walk-in", "Multiple", "ON", "CA",
-                "https://www.medicentres.com/", decision_maker_title="VP Operations"),
-    Institution("Appletree Medical — Toronto Flagship", "walk-in", "Toronto", "ON", "CA",
-                "https://appletreemedical.ca/", decision_maker_title="Clinic Manager"),
-    Institution("Shoppers Drug Mart Medical Clinics", "walk-in", "Multiple", "ON", "CA",
-                "https://www.shoppersdrugmart.ca/", decision_maker_title="Director, Clinic Operations"),
-    Institution("Cleveland Clinic Canada", "specialty", "Toronto", "ON", "CA",
-                "https://my.clevelandclinic.org/canada", decision_maker_title="Director, Operations"),
-    Institution("Medcan", "specialty", "Toronto", "ON", "CA",
-                "https://www.medcan.com/", decision_maker_title="CTO / Director Digital Health"),
-    Institution("Maple (virtual + in-person)", "walk-in", "Toronto", "ON", "CA",
-                "https://www.getmaple.ca/", decision_maker_title="Head of Partnerships",
-                research_notes="Tech-forward. May already have similar tools. Check competitor risk."),
-    Institution("Well Health Technologies — Ontario clinics", "walk-in", "Multiple", "ON", "CA",
-                "https://well.ca/pages/health", decision_maker_title="VP Digital Health",
-                research_notes="Public co. on TSX. Has innovation budget. Harder to reach but enterprise value."),
-]
+    if not os.path.exists(seeds_file):
+        print(
+            f"\nERROR: seeds.csv not found at: {seeds_file}\n"
+            "Copy seeds.csv to this directory. "
+            "(Kept private — not in the public repo.)"
+        )
+        sys.exit(1)
 
-# Top US university health centres — innovation-forward targets
-US_UNIVERSITY_HEALTH_CENTRES = [
-    Institution("NYU Student Health Center", "university", "New York", "NY", "US",
-                "https://www.nyu.edu/students/health-and-wellness/student-health-center.html",
-                decision_maker_title="Executive Director, Student Health"),
-    Institution("Columbia Health", "university", "New York", "NY", "US",
-                "https://health.columbia.edu/", decision_maker_title="Executive Director, Columbia Health"),
-    Institution("Cornell Health", "university", "Ithaca", "NY", "US",
-                "https://health.cornell.edu/", decision_maker_title="Executive Director"),
-    Institution("Johns Hopkins Student Health", "university", "Baltimore", "MD", "US",
-                "https://studentaffairs.jhu.edu/student-health/", decision_maker_title="Director, Student Health"),
-    Institution("University of Michigan University Health Service", "university", "Ann Arbor", "MI", "US",
-                "https://uhs.umich.edu/", decision_maker_title="Director, University Health Service"),
-    Institution("UCLA Arthur Ashe Student Health and Wellness Center", "university", "Los Angeles", "CA", "US",
-                "https://www.studenthealth.ucla.edu/", decision_maker_title="Director, Student Health"),
-    Institution("University of Chicago Student Wellness", "university", "Chicago", "IL", "US",
-                "https://wellness.uchicago.edu/", decision_maker_title="Executive Director"),
-    Institution("Northwestern Student Health Service", "university", "Evanston", "IL", "US",
-                "https://www.northwestern.edu/health-service/", decision_maker_title="Director"),
-    Institution("Penn Student Health Service", "university", "Philadelphia", "PA", "US",
-                "https://www.vpul.upenn.edu/shs/", decision_maker_title="Executive Director"),
-    Institution("Harvard University Health Services", "university", "Cambridge", "MA", "US",
-                "https://huhs.harvard.edu/", decision_maker_title="Chief Medical Officer",
-                research_notes="Prestigious but hard to access. Good for brand. Try through alumni network."),
-    Institution("MIT Medical", "university", "Cambridge", "MA", "US",
-                "https://medical.mit.edu/", decision_maker_title="Chief Medical Officer",
-                research_notes="Very tech-forward by nature. High innovation score expected."),
-    Institution("Stanford Vaden Health Center", "university", "Palo Alto", "CA", "US",
-                "https://vaden.stanford.edu/", decision_maker_title="Executive Director"),
-    Institution("University of Texas at Austin Student Health Services", "university", "Austin", "TX", "US",
-                "https://healthyhorns.utexas.edu/", decision_maker_title="Director"),
-    Institution("University of Florida Student Health Care Center", "university", "Gainesville", "FL", "US",
-                "https://shcc.ufl.edu/", decision_maker_title="Director"),
-    Institution("Georgia Tech Student Health Center", "university", "Atlanta", "GA", "US",
-                "https://health.gatech.edu/", decision_maker_title="Director"),
-    Institution("Carnegie Mellon University Health Services", "university", "Pittsburgh", "PA", "US",
-                "https://www.cmu.edu/health-services/", decision_maker_title="Medical Director",
-                research_notes="Tech-focused student body. Strong fit for AI-first product pitch."),
-]
+    institutions = []
+    with open(seeds_file, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            institutions.append(Institution(
+                name=row.get("name", ""),
+                inst_type=row.get("inst_type", ""),
+                city=row.get("city", ""),
+                province_state=row.get("province_state", ""),
+                country=row.get("country", ""),
+                website=row.get("website", ""),
+                phone=row.get("phone", ""),
+                decision_maker_name=row.get("decision_maker_name", ""),
+                decision_maker_title=row.get("decision_maker_title", ""),
+                research_notes=row.get("research_notes", ""),
+                source="curated",
+            ))
+
+    print(f"  Loaded {len(institutions)} seed institutions from {seeds_file}")
+    return institutions
 
 # US FQHCs — pull from HRSA API, filtered to target metros
 def pull_us_fqhcs(states: list[str] = None, limit: int = 50) -> list[Institution]:
@@ -310,33 +224,39 @@ def pull_chc_ontario_directory() -> list[Institution]:
     return institutions
 
 
-def build_institution_list(include_countries: list[str] = None) -> list[Institution]:
+def build_institution_list(
+    include_countries: list[str] = None,
+    seeds_file: str = None,
+) -> list[Institution]:
     """Combine all sources into a deduplicated institution list."""
     countries = include_countries or ["CA", "US"]
     all_institutions = []
 
+    # Load all seeds and split by country
+    seeds = load_seeds(seeds_file)
+    seed_names = {i.name.lower() for i in seeds}
+
     if "CA" in countries:
         print("\n[Stage 1] Building Ontario institution list...")
-        all_institutions.extend(ONTARIO_UNIVERSITY_HEALTH_CENTRES)
-        all_institutions.extend(ONTARIO_CHC_SEED)
-        all_institutions.extend(ONTARIO_WALKIN_SEED)
+        ca_seeds = [s for s in seeds if s.country == "CA"]
+        all_institutions.extend(ca_seeds)
 
         # Try to get more CHCs from live directory
         live_chcs = pull_chc_ontario_directory()
-        # Deduplicate against seed
-        seed_names = {i.name.lower() for i in ONTARIO_CHC_SEED}
-        new_chcs = [c for c in live_chcs if c.name.lower() not in seed_names]
+        chc_seed_names = {i.name.lower() for i in ca_seeds if i.inst_type == "CHC"}
+        new_chcs = [c for c in live_chcs if c.name.lower() not in chc_seed_names]
         all_institutions.extend(new_chcs[:30])  # cap at 30 additional
 
     if "US" in countries:
         print("\n[Stage 1] Building US institution list...")
-        all_institutions.extend(US_UNIVERSITY_HEALTH_CENTRES)
+        us_seeds = [s for s in seeds if s.country == "US"]
+        all_institutions.extend(us_seeds)
 
         # Pull FQHCs from HRSA
         fqhcs = pull_us_fqhcs(limit=60)
         all_institutions.extend(fqhcs)
 
-    # Tag sources for seed data
+    # Tag sources for any institution missing a source tag
     for inst in all_institutions:
         if not inst.source:
             inst.source = "curated"
@@ -836,6 +756,61 @@ def load_existing_names(output_path: str) -> set:
 
 
 # ─────────────────────────────────────────────
+# Supabase integration
+# ─────────────────────────────────────────────
+
+def get_supabase_client(service_role_key: str, url: str):
+    from supabase import create_client
+    return create_client(url, service_role_key)
+
+
+def upsert_to_supabase(
+    institutions: list[Institution],
+    supabase_url: str,
+    service_role_key: str,
+):
+    """
+    Upsert all institutions to the Supabase prospects table.
+    Preserves CRM fields (status, assigned_to, contact_notes) on conflict —
+    only discovery/scoring fields are overwritten.
+    """
+    client = get_supabase_client(service_role_key, supabase_url)
+    rows = []
+    for inst in institutions:
+        row = {
+            "name": inst.name,
+            "inst_type": inst.inst_type,
+            "city": inst.city,
+            "province_state": inst.province_state,
+            "country": inst.country,
+            "website": inst.website,
+            "phone": inst.phone,
+            "email": inst.email,
+            "decision_maker_name": inst.decision_maker_name,
+            "decision_maker_title": inst.decision_maker_title,
+            "decision_maker_linkedin": inst.decision_maker_linkedin,
+            "innovation_score": inst.innovation_score,
+            "accessibility_score": inst.accessibility_score,
+            "fit_score": inst.fit_score,
+            "competitor_risk": inst.competitor_risk,
+            "priority_rank": inst.priority_rank,
+            "research_notes": inst.research_notes,
+            "outreach_angle": inst.outreach_angle,
+            "source": inst.source,
+        }
+        rows.append(row)
+
+    # Upsert in batches of 50
+    for i in range(0, len(rows), 50):
+        batch = rows[i : i + 50]
+        client.table("prospects").upsert(
+            batch, on_conflict="name", ignore_duplicates=False
+        ).execute()
+
+    print(f"\n[Supabase] Upserted {len(rows)} institutions to prospects table.")
+
+
+# ─────────────────────────────────────────────
 # Main
 # ─────────────────────────────────────────────
 
@@ -860,6 +835,17 @@ def main():
                         help="Output CSV filename (default: medport_prospects.csv)")
     parser.add_argument("--groq-key", default=None,
                         help="Groq API key (overrides GROQ_API_KEY env var)")
+    parser.add_argument(
+        "--seeds-file",
+        default=None,
+        help="Path to seeds.csv (default: seeds.csv in script directory)",
+    )
+    parser.add_argument(
+        "--supabase",
+        action="store_true",
+        default=False,
+        help="Upsert results to Supabase after Stage 3 (requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)",
+    )
     args = parser.parse_args()
 
     countries = {
@@ -878,7 +864,10 @@ def main():
         print("Get a free key at https://console.groq.com and set GROQ_API_KEY env var.")
 
     # Stage 1
-    institutions = build_institution_list(include_countries=countries)
+    institutions = build_institution_list(
+        include_countries=countries,
+        seeds_file=args.seeds_file,
+    )
 
     if args.stage1_only:
         save_csv(institutions, args.output)
@@ -899,6 +888,20 @@ def main():
 
     # Stage 3
     save_csv(institutions, args.output)
+
+    # Supabase upsert (optional — requires --supabase flag and env vars)
+    if args.supabase:
+        supabase_url = os.environ.get("SUPABASE_URL", "")
+        supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+        if supabase_url and supabase_key:
+            try:
+                upsert_to_supabase(institutions, supabase_url, supabase_key)
+            except Exception as e:
+                print(f"\n[Supabase] Upsert failed: {e}")
+        else:
+            print(
+                "\n[Supabase] Skipping upsert — SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set."
+            )
 
     # Print summary
     tier_a = [i for i in institutions if i.priority_rank == 1]
