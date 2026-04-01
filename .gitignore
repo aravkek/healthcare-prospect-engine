@@ -1,0 +1,7 @@
+.env
+*.db
+__pycache__/
+*.pyc
+medport_prospects.csv
+discovery_runs.log
+.DS_Store
