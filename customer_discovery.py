@@ -588,7 +588,7 @@ def _gather_external_intel(name: str, city: str, country: str, website: str) -> 
     return intel
 
 
-def call_groq(prompt: str, groq_api_key: str, model: str = "llama-3.1-8b-instant") -> str:
+def call_groq(prompt: str, groq_api_key: str, model: str = "llama-3.3-70b-versatile") -> str:
     """Call Groq's OpenAI-compatible chat completions endpoint."""
     resp = requests.post(
         "https://api.groq.com/openai/v1/chat/completions",
@@ -659,10 +659,11 @@ YOUR JOB:
      "Your site still says 'call [phone] to book' — we found three Google reviews in the last 6 months where patients mentioned they 'couldn't get through.' MedPort's AI picks up every call, books the appointment, and logs it in your system. Takes 15 minutes to set up. Free for 30 days."
 
    The outreach_angle MUST:
-   - Reference a SPECIFIC thing found in the research (a phrase from their website, a patient complaint, a job posting, a news item, their patient population)
-   - Name their EXACT pain (not generic "phone burden" — be specific: "your phones go unanswered after 4pm", "patients waiting 3+ days for a callback", "you're hiring a receptionist while understaffed")
-   - Make the value prop feel like it was written for them, not copy-pasted
-   - End with a zero-risk ask ("free pilot, just a phone number redirect, 20-minute demo")
+   - Open with ONE specific thing you actually found (a phrase verbatim from their site, a real patient complaint quote, a job posting detail, a news item — NOT a generic template)
+   - Name their EXACT pain with specificity — if they say "call us Mon-Fri 9-4" say that; if there's a review mentioning wait times, quote it; if they're hiring a receptionist, reference it
+   - Be written in first person as Arav, a student founder — human, direct, not corporate
+   - End with a concrete zero-risk ask: free 30-day pilot, 15-minute Zoom, or "can I send you a 2-min demo video?"
+   - NEVER use generic phrases like "your clinic likely receives many calls" or "you probably have phone burden" — if you don't have a specific signal, say what you DO know and ask a question instead
 
 3. WRITE personalization_hooks: 3 specific, surprising things you found that Arav can reference when he emails. Each should be something the recipient will think "how did they know that?" Examples: a phrase from their website, a patient review quote, a news item, a job posting, their specific patient count.
 
@@ -1027,9 +1028,8 @@ def research_all(institutions: list[Institution],
         print(f" -> Tier {tier} | Score {score}/30 | Competitor risk: {inst.competitor_risk}")
 
         if groq_api_key:
-            # 8B instant model: 30,000 TPM — 5s between calls is safe
-            # 70B versatile model: 6,000 TPM — use --groq-model llama-3.3-70b-versatile + longer sleep
-            time.sleep(5)
+            # 70B: 6,000 TPM; deep prompts ~2,000 tokens each → 15s between calls
+            time.sleep(15)
         else:
             time.sleep(0.5)
 
