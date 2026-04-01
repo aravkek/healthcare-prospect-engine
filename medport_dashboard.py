@@ -18,6 +18,17 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
+
+def _secret(key: str, default: str = "") -> str:
+    """Read from env first, then st.secrets if available, else return default."""
+    val = os.environ.get(key, "")
+    if val:
+        return val
+    try:
+        return st.secrets.get(key, default)
+    except Exception:
+        return default
+
 # ─────────────────────────────────────────────
 # Page config — must be first Streamlit call
 # ─────────────────────────────────────────────
@@ -33,12 +44,19 @@ st.set_page_config(
 # Auth — Google OAuth via Streamlit built-in
 # ─────────────────────────────────────────────
 
-if not st.experimental_user.is_logged_in:
-    st.title("MedPort Prospect Dashboard")
-    st.markdown("Sign in with your MedPort Google account to access the prospect database.")
-    if st.button("Sign in with Google", type="primary"):
-        st.login()
-    st.stop()
+LOCAL_DEV = os.environ.get("LOCAL_DEV", "false").lower() == "true"
+try:
+    _auth_configured = bool(st.secrets.get("auth", {}))
+except Exception:
+    _auth_configured = False
+
+if not LOCAL_DEV and _auth_configured:
+    if not st.experimental_user.is_logged_in:
+        st.title("MedPort Prospect Dashboard")
+        st.markdown("Sign in with your MedPort Google account to access the prospect database.")
+        if st.button("Sign in with Google", type="primary"):
+            st.login()
+        st.stop()
 
 # ─────────────────────────────────────────────
 # Custom CSS
@@ -257,8 +275,8 @@ def _load_csv_fallback() -> pd.DataFrame:
 
 @st.cache_data(ttl=30)
 def load_from_supabase() -> pd.DataFrame:
-    url = os.environ.get("SUPABASE_URL", "") or st.secrets.get("SUPABASE_URL", "")
-    key = os.environ.get("SUPABASE_ANON_KEY", "") or st.secrets.get("SUPABASE_ANON_KEY", "")
+    url = _secret("SUPABASE_URL")
+    key = _secret("SUPABASE_ANON_KEY")
     if not url or not key:
         return _load_csv_fallback()
     try:
@@ -282,8 +300,8 @@ def load_from_supabase() -> pd.DataFrame:
 
 def update_prospect_crm(prospect_id: str, updates: dict):
     """Write CRM field updates back to Supabase."""
-    url = os.environ.get("SUPABASE_URL", "") or st.secrets.get("SUPABASE_URL", "")
-    key = os.environ.get("SUPABASE_ANON_KEY", "") or st.secrets.get("SUPABASE_ANON_KEY", "")
+    url = _secret("SUPABASE_URL")
+    key = _secret("SUPABASE_ANON_KEY")
     if not url or not key:
         return  # silently skip — CSV mode has no write-back
     try:
@@ -633,7 +651,7 @@ if auto_refresh:
 # PostHog analytics
 # ─────────────────────────────────────────────
 
-POSTHOG_KEY = os.environ.get("POSTHOG_API_KEY", "") or st.secrets.get("POSTHOG_API_KEY", "")
+POSTHOG_KEY = _secret("POSTHOG_API_KEY")
 if POSTHOG_KEY:
     components.html(f"""
     <script>

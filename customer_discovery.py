@@ -292,22 +292,25 @@ def fetch_website_text(url: str, max_chars: int = 3000) -> str:
         return ""
 
 
-def _fetch_additional_pages(base_url: str, max_pages: int = 2, max_chars: int = 1500) -> str:
+def _fetch_additional_pages(base_url: str, max_pages: int = 3, max_chars: int = 2000) -> str:
     """
-    Try common sub-pages to gather richer content for research.
-    Returns concatenated text from the first pages that return content.
+    Fetch sub-pages most likely to reveal booking method, staffing, and tech stack.
+    Priority: appointments/booking pages first, then about/team/contact.
     """
     if not base_url or not base_url.startswith("http"):
         return ""
 
-    # Normalise base: strip trailing slash
     base = base_url.rstrip("/")
-    candidate_paths = ["/about", "/about-us", "/team", "/staff", "/leadership", "/contact"]
+    # Booking/appointment pages first — these reveal phone vs online dependency
+    candidate_paths = [
+        "/appointments", "/book", "/booking", "/book-appointment",
+        "/make-an-appointment", "/schedule", "/services/appointments",
+        "/patient-services", "/new-patients", "/new-patient",
+        "/about", "/about-us", "/team", "/staff", "/contact",
+    ]
 
     collected = []
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-    }
+    headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
 
     for path in candidate_paths:
         if len(collected) >= max_pages:
@@ -320,7 +323,7 @@ def _fetch_additional_pages(base_url: str, max_pages: int = 2, max_chars: int = 
             for tag in soup(["script", "style", "nav", "footer"]):
                 tag.decompose()
             text = " ".join(soup.get_text(separator=" ", strip=True).split())
-            if len(text) > 100:  # only count pages with real content
+            if len(text) > 100:
                 collected.append(f"[{path}]: {text[:max_chars]}")
         except Exception:
             continue
@@ -328,7 +331,264 @@ def _fetch_additional_pages(base_url: str, max_pages: int = 2, max_chars: int = 
     return "\n\n".join(collected)
 
 
-def call_groq(prompt: str, groq_api_key: str, model: str = "llama-3.3-70b-versatile") -> str:
+# Known online booking / EHR platforms — presence means they have non-phone booking
+ONLINE_BOOKING_PLATFORMS = {
+    "janeapp.com": "Jane App",
+    "jane.app": "Jane App",
+    "zocdoc.com": "Zocdoc",
+    "mychart": "Epic MyChart",
+    "epic.com": "Epic",
+    "calendly.com": "Calendly",
+    "acuityscheduling.com": "Acuity Scheduling",
+    "simplepractice.com": "SimplePractice",
+    "cognisantmd.com": "Ocean (CognisantMD)",
+    "ocean.cognisantmd": "Ocean",
+    "telus.com/health": "Telus Health",
+    "qhrtechnologies": "QHR/Accuro",
+    "accuro": "Accuro",
+    "meditech": "Meditech",
+    "athenahealth": "Athenahealth",
+    "drchrono": "DrChrono",
+    "healthengine": "HealthEngine",
+    "patientnotebook": "Patient Notebook",
+    "phreesia": "Phreesia",
+    "opendental": "Open Dental",
+    "dentrix": "Dentrix",
+    "booksy": "Booksy",
+    "mindbody": "Mindbody",
+    "squareup.com/appointments": "Square Appointments",
+    "patientpop": "PatientPop",
+    "practicefusion": "Practice Fusion",
+    "kareo": "Kareo",
+    "luminare": "Luminare Health",
+    "nextech": "NexTech",
+    "netsmart": "Netsmart",
+    "advancedmd": "AdvancedMD",
+    "eclinicalworks": "eClinicalWorks",
+    "book online": "generic online booking",
+    "request an appointment": "online appointment request",
+    "schedule online": "online scheduling",
+}
+
+# Direct AI voice/phone competitors — if detected, flag as competitor risk
+# Includes Canadian and US players
+AI_VOICE_COMPETITORS = {
+    # Canadian
+    "novoflow": "Novoflow",
+    "decoda": "Decoda Health",
+    "pine ai": "Pine AI",
+    "pineai": "Pine AI",
+    "league.com": "League",
+    "inputhealth": "InputHealth",
+    "talksoft": "Talksoft",
+    # US voice/phone AI
+    "hyro.ai": "Hyro",
+    "hyro": "Hyro",
+    "syllable": "Syllable",
+    "artera": "Artera",
+    "weave": "Weave Communications",
+    "getweave": "Weave",
+    "andorhealth": "Andor Health",
+    "orbita": "Orbita",
+    "vocca": "Vocca",
+    "assort health": "Assort Health",
+    "assortHealth": "Assort Health",
+    "nuance": "Nuance DAX",
+    "suki": "Suki",
+    "klara": "Klara",
+    "luma health": "Luma Health",
+    "lumahealth": "Luma Health",
+    "relatient": "Relatient",
+    "notable health": "Notable Health",
+    "notablehealth": "Notable Health",
+    "kyruus": "Kyruus",
+    "mend.com": "Mend",
+    "updox": "Updox",
+    "bright.md": "Bright.md",
+    "healthjoy": "HealthJoy",
+    "authenticx": "Authenticx",
+    "rio.ai": "Rio AI",
+    "nabla": "Nabla",
+    "deepscribe": "DeepScribe",
+    "abridge": "Abridge",
+    "ambience": "Ambience Healthcare",
+}
+
+# Signals that the clinic is phone-dependent for booking (high MedPort fit)
+PHONE_DEPENDENCY_SIGNALS = [
+    "call us to book", "call to book", "call to schedule", "phone to book",
+    "appointments by phone", "appointment by phone", "call our office",
+    "please call", "to schedule an appointment, call", "to book, call",
+    "appointments are available by calling", "contact us by phone",
+    "due to high call volume", "high call volume", "leave a message",
+    "please leave a message", "our lines are busy", "call during office hours",
+    "appointments by calling", "reach us by phone", "phone only",
+    "call reception", "call the clinic", "no online booking",
+]
+
+# Admin overload signals
+ADMIN_OVERLOAD_SIGNALS = [
+    "high call volume", "high volume", "please be patient", "allow 2-3 business days",
+    "allow 3-5 business days", "limited appointment availability",
+    "currently not accepting new patients", "waitlist", "wait list",
+    "we are experiencing", "understaffed", "staff shortage",
+    "reduced hours", "limited staff",
+]
+
+
+def _detect_booking_system(url: str) -> dict:
+    """
+    Scan website HTML source for embedded booking platforms and phone-dependency signals.
+    Returns a dict with findings — this is the most reliable signal for MedPort fit.
+    """
+    result = {
+        "online_booking_platforms": [],
+        "phone_dependency_signals": [],
+        "admin_overload_signals": [],
+        "has_online_booking": False,
+        "phone_dependent": False,
+    }
+
+    if not url or not url.startswith("http"):
+        return result
+
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
+        resp = requests.get(url, headers=headers, timeout=10)
+        if resp.status_code != 200:
+            return result
+
+        # Search raw HTML (catches embedded iframes, script srcs, etc.)
+        html_lower = resp.text.lower()
+        page_text_lower = " ".join(BeautifulSoup(resp.text, "html.parser").get_text().split()).lower()
+
+        for signature, platform_name in ONLINE_BOOKING_PLATFORMS.items():
+            if signature in html_lower and platform_name not in result["online_booking_platforms"]:
+                result["online_booking_platforms"].append(platform_name)
+
+        for signal in PHONE_DEPENDENCY_SIGNALS:
+            if signal in page_text_lower:
+                result["phone_dependency_signals"].append(signal)
+
+        for signal in ADMIN_OVERLOAD_SIGNALS:
+            if signal in page_text_lower:
+                result["admin_overload_signals"].append(signal)
+
+        competitors_found = []
+        for signature, comp_name in AI_VOICE_COMPETITORS.items():
+            if signature in html_lower or signature in page_text_lower:
+                if comp_name not in competitors_found:
+                    competitors_found.append(comp_name)
+        result["competitors_detected"] = competitors_found
+
+        result["has_online_booking"] = len(result["online_booking_platforms"]) > 0
+        result["phone_dependent"] = (
+            len(result["phone_dependency_signals"]) >= 1
+            or (not result["has_online_booking"] and len(result["phone_dependency_signals"]) == 0)
+        )
+
+    except Exception:
+        pass
+
+    return result
+
+
+def _ddg_search(query: str, max_results: int = 3) -> str:
+    """Free DuckDuckGo search. Returns snippet text from top results."""
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        resp = requests.get(
+            "https://html.duckduckgo.com/html/",
+            params={"q": query},
+            headers=headers,
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            return ""
+        soup = BeautifulSoup(resp.text, "html.parser")
+        results = []
+        for r in soup.select(".result__snippet")[:max_results]:
+            text = r.get_text(strip=True)
+            if text:
+                results.append(text)
+        return " | ".join(results)
+    except Exception:
+        return ""
+
+
+def _gather_external_intel(name: str, city: str, country: str, website: str) -> dict:
+    """
+    Run multiple targeted searches to gather external signals.
+    Returns a dict with patient complaints, job postings, news, competitor mentions.
+    """
+    intel = {
+        "patient_complaints": "",
+        "job_postings": "",
+        "recent_news": "",
+        "competitor_mentions": "",
+        "patient_count_signal": "",
+    }
+
+    time.sleep(0.3)  # be polite between searches
+
+    # 1. Patient complaints about phones/wait — the strongest fit signal
+    complaints = _ddg_search(
+        f'"{name}" reviews "phone" OR "wait time" OR "hard to reach" OR "can\'t get through" OR "busy signal"',
+        max_results=3,
+    )
+    if complaints:
+        intel["patient_complaints"] = complaints
+
+    time.sleep(0.3)
+
+    # 2. Job postings for admin/receptionist — signals understaffed admin
+    job_search = _ddg_search(
+        f'"{name}" "medical receptionist" OR "medical secretary" OR "patient services representative" OR "administrative assistant" site:indeed.com OR site:linkedin.com OR site:workopolis.com',
+        max_results=2,
+    )
+    if not job_search:
+        job_search = _ddg_search(
+            f'{name} {city} receptionist OR "front desk" hiring 2025 OR 2026',
+            max_results=2,
+        )
+    if job_search:
+        intel["job_postings"] = job_search
+
+    time.sleep(0.3)
+
+    # 3. Recent news — expansions, funding, staffing crises
+    news = _ddg_search(
+        f'"{name}" 2025 OR 2026 expansion OR funding OR "new clinic" OR "phone system" OR technology OR AI',
+        max_results=2,
+    )
+    if news:
+        intel["recent_news"] = news
+
+    time.sleep(0.3)
+
+    # 4. Competitor mentions — are they already using a competitor?
+    competitor_names = "Novoflow OR Decoda OR Hyro OR Syllable OR Artera OR Nuance OR Vocca OR Weave OR Klara OR \"Luma Health\" OR \"Assort Health\" OR \"Pine AI\""
+    comp = _ddg_search(f'"{name}" {competitor_names}', max_results=2)
+    if comp:
+        intel["competitor_mentions"] = comp
+
+    time.sleep(0.3)
+
+    # 5. Patient volume signals
+    volume = _ddg_search(
+        f'"{name}" "patients" OR "visits per year" OR "serves" OR "patient population" OR "annual visits"',
+        max_results=2,
+    )
+    if volume:
+        intel["patient_count_signal"] = volume
+
+    return intel
+
+
+def call_groq(prompt: str, groq_api_key: str, model: str = "llama-3.1-8b-instant") -> str:
     """Call Groq's OpenAI-compatible chat completions endpoint."""
     resp = requests.post(
         "https://api.groq.com/openai/v1/chat/completions",
@@ -346,45 +606,86 @@ def call_groq(prompt: str, groq_api_key: str, model: str = "llama-3.3-70b-versat
 
 
 _GROQ_RESEARCH_PROMPT = """\
-You are helping MedPort, an AI healthcare startup founded by 5 university students in Toronto, identify the best early customers for their AI voice agent product.
+You are a sales intelligence analyst helping MedPort — a 5-person student startup from Toronto — craft cold outreach so perfectly targeted that recipients feel "I can't believe this landed in my inbox at exactly the right time."
 
-MedPort's product:
-- An AI voice agent (powered by ElevenLabs) that handles incoming patient calls for clinics
-- Answers calls, books appointments, transcribes intake info, exports to Google Sheets or EHR
-- Saves clinics 10-20 staff hours/week on phone admin
-- Price: ~$300-600/month per clinic
-- No EHR integration required — just a phone number redirect
-- Founded by Indian immigrant students at a Toronto university
+MedPort builds AI voice agents that answer patient phone calls 24/7, book appointments, capture intake, and sync to Google Sheets or any EHR. Setup = redirect a phone number. Cost = $300-600/month. No IT project. No EHR integration required. Free 30-day pilot for early partners.
 
-Ideal customer profile:
-- Community health centres, university health services, walk-in clinics, FQHCs
-- 2-30 practitioners, understaffed admin
-- Open to working with student founders / startups
-- Government-funded or grant-seeking
-- NOT already using: Vocca, Assort Health, Nuance DAX, Suki, Klara, Luma Health
+The ONLY institutions worth emailing are ones where:
+1. Phone calls are the PRIMARY or ONLY booking method (not self-serve online)
+2. They're small-to-mid enough that a student founder can reach the decision maker directly
+3. No competitor AI phone product is already deployed there
 
-Institution to research:
+---
+INSTITUTION PROFILE:
 Name: {name}
 Type: {inst_type}
 Location: {city}, {province_state}, {country}
 Website: {website}
-Known info: {research_notes}
 
-Website content:
+BOOKING SYSTEM SCAN (from raw HTML — highly reliable):
+  Online booking platforms detected in HTML: {online_platforms}
+  Phone-dependency phrases found verbatim on site: {phone_signals}
+  Admin overload phrases found verbatim on site: {admin_signals}
+  Competitor AI tools detected on site: {competitors_detected}
+
+WEBSITE TEXT (main page + appointment/about pages):
 {website_text}
 
-Respond ONLY with valid JSON (no markdown, no explanation):
+EXTERNAL INTELLIGENCE:
+  Patient complaints about phones/wait: {patient_complaints}
+  Job postings for admin/receptionist roles: {job_postings}
+  Recent news (expansion, funding, staffing): {recent_news}
+  Competitor product mentions in news/reviews: {competitor_mentions}
+  Patient volume signals: {patient_count_signal}
+
+---
+YOUR JOB:
+
+1. SCORE this institution honestly on three dimensions:
+   - fit_score (1-10): ONLY high if phones are clearly the booking method AND they show admin burden
+     * 9-10: Phone-only booking confirmed, patient complaints about wait, or job postings for reception = PERFECT
+     * 7-8: Phone likely primary, mixed signals
+     * 4-6: Has online booking but phones still used for intake/overflow
+     * 1-3: Fully online self-serve, very little phone burden
+   - innovation_score (1-10): Tech adoption signals, past startup partnerships, digital health language, government innovation grants
+   - accessibility_score (1-10): Can a 22-year-old student founder get a reply?
+     * 9-10: Small org, named director reachable by email, warm intro exists
+     * 6-8: Mid-size, email reach is realistic
+     * 1-5: Large health system, hospital network, requires procurement process
+
+2. WRITE the outreach angle like THIS:
+   BAD (generic, will be ignored): "Your clinic likely receives many calls. MedPort can help."
+   GOOD (specific, evidence-based, will convert):
+     "Your site still says 'call [phone] to book' — we found three Google reviews in the last 6 months where patients mentioned they 'couldn't get through.' MedPort's AI picks up every call, books the appointment, and logs it in your system. Takes 15 minutes to set up. Free for 30 days."
+
+   The outreach_angle MUST:
+   - Reference a SPECIFIC thing found in the research (a phrase from their website, a patient complaint, a job posting, a news item, their patient population)
+   - Name their EXACT pain (not generic "phone burden" — be specific: "your phones go unanswered after 4pm", "patients waiting 3+ days for a callback", "you're hiring a receptionist while understaffed")
+   - Make the value prop feel like it was written for them, not copy-pasted
+   - End with a zero-risk ask ("free pilot, just a phone number redirect, 20-minute demo")
+
+3. WRITE personalization_hooks: 3 specific, surprising things you found that Arav can reference when he emails. Each should be something the recipient will think "how did they know that?" Examples: a phrase from their website, a patient review quote, a news item, a job posting, their specific patient count.
+
+4. FLAG competitor risk: If ANY of these are found — Novoflow, Decoda Health, Pine AI, Hyro, Syllable, Artera, Nuance, Vocca, Assort Health, Suki, Weave, Klara, Luma Health, Notable Health, Andor Health, Orbita — mark competitor_risk as high and name them.
+
+Respond ONLY with valid JSON (no markdown fences, no explanation):
 {{
   "innovation_score": <1-10>,
-  "accessibility_score": <1-10, where 10 = easy for student founder to get a meeting>,
-  "fit_score": <1-10, where 10 = perfect match for MedPort>,
+  "accessibility_score": <1-10>,
+  "fit_score": <1-10>,
+  "phone_dependency": "<phone-only|mixed|online-only|unknown>",
+  "booking_system_used": "<platform name OR 'phone only' OR 'unknown'>",
+  "estimated_weekly_call_volume": "<low <50/wk | medium 50-200/wk | high 200+/wk | unknown>",
   "competitor_risk": "<none|low|medium|high>",
-  "decision_maker_name": "<name if found on website, else empty string>",
-  "decision_maker_title": "<best title to target>",
-  "decision_maker_linkedin_search": "<LinkedIn search string to find them>",
-  "research_notes": "<2-3 sentences: key signals, red flags, current tech situation>",
-  "outreach_angle": "<1-2 sentence specific pitch hook for THIS institution>",
-  "priority_tier": "<A|B|C>"
+  "competitors_found": "<comma-separated list or 'none'>",
+  "existing_ai_tools": "<tools found or 'none detected'>",
+  "decision_maker_name": "<name from website/about page, else empty>",
+  "decision_maker_title": "<exact title to cold-email at this institution type>",
+  "decision_maker_linkedin_search": "<first last title org LinkedIn>",
+  "personalization_hooks": "<hook 1> | <hook 2> | <hook 3>",
+  "research_notes": "<4-5 sentences: booking method evidence with quotes, patient volume, admin burden signals, tech posture, honest assessment of whether they'll say yes>",
+  "outreach_angle": "<2-3 sentences — specific, evidence-based, references real finding, ends with zero-risk ask. Written AS Arav, a student founder who did his homework.>",
+  "priority_tier": "<A = email this week | B = email this month | C = pipeline only>"
 }}"""
 
 
@@ -420,9 +721,12 @@ def _parse_groq_response(content: str, inst: Institution) -> Institution:
     if dm_linkedin:
         inst.decision_maker_linkedin = dm_linkedin
 
+    # Fold personalization hooks into research notes for visibility
+    hooks = str(data.get("personalization_hooks", "") or "").strip()
     research_notes = str(data.get("research_notes", "") or "").strip()
+    if hooks:
+        research_notes = f"[HOOKS: {hooks}] {research_notes}"
     if research_notes:
-        # Preserve pre-existing notes (e.g. "Demo scheduled") by prepending
         if inst.research_notes and inst.research_notes not in research_notes:
             inst.research_notes = inst.research_notes.rstrip(".") + ". " + research_notes
         else:
@@ -445,18 +749,23 @@ def _parse_groq_response(content: str, inst: Institution) -> Institution:
 
 def research_institution_groq(inst: Institution, groq_api_key: str) -> Institution:
     """
-    Fetch website content (main page + up to 2 sub-pages) and send to Groq
-    for structured research and scoring.
+    Deep research: booking system scan + multi-page scrape + DuckDuckGo search + Groq scoring.
     """
-    # Fetch main page
-    main_text = fetch_website_text(inst.website, max_chars=3000)
+    # 1. Scan HTML source for booking platform signatures and phone-dependency signals
+    booking_scan = _detect_booking_system(inst.website)
 
-    # Fetch additional sub-pages for richer context
-    extra_text = _fetch_additional_pages(inst.website, max_pages=2, max_chars=1500)
+    # 2. Fetch main page text
+    main_text = fetch_website_text(inst.website, max_chars=2500)
+
+    # 3. Fetch appointment/about/team sub-pages
+    extra_text = _fetch_additional_pages(inst.website, max_pages=3, max_chars=2000)
 
     website_text = main_text
     if extra_text:
         website_text = main_text + "\n\n" + extra_text
+
+    # 4. Gather external intelligence (patient complaints, job postings, news, competitors)
+    intel = _gather_external_intel(inst.name, inst.city, inst.country, inst.website)
 
     if not website_text:
         website_text = "(website not accessible)"
@@ -468,21 +777,35 @@ def research_institution_groq(inst: Institution, groq_api_key: str) -> Instituti
         province_state=inst.province_state,
         country=inst.country,
         website=inst.website or "(no website)",
-        research_notes=inst.research_notes or "(none)",
-        website_text=website_text[:4000],  # hard cap to stay within token budget
+        online_platforms=", ".join(booking_scan["online_booking_platforms"]) or "none detected",
+        phone_signals="; ".join(booking_scan["phone_dependency_signals"][:5]) or "none detected",
+        admin_signals="; ".join(booking_scan["admin_overload_signals"][:3]) or "none detected",
+        competitors_detected=", ".join(booking_scan.get("competitors_detected", [])) or "none detected",
+        website_text=website_text[:1800],
+        patient_complaints=(intel["patient_complaints"] or "none found")[:300],
+        job_postings=(intel["job_postings"] or "none found")[:200],
+        recent_news=(intel["recent_news"] or "none found")[:200],
+        competitor_mentions=(intel["competitor_mentions"] or "none found")[:200],
+        patient_count_signal=(intel["patient_count_signal"] or "unknown")[:150],
     )
 
-    # Rate limiting: free tier is 30 RPM — sleep 2s between calls
-    # Caller handles the sleep; here we handle 429 with one retry
-    try:
-        raw = call_groq(prompt, groq_api_key)
-    except requests.HTTPError as e:
-        if e.response is not None and e.response.status_code == 429:
-            print(" [429 rate limit, waiting 10s]", end="", flush=True)
-            time.sleep(10)
+    # Rate limiting: free tier 6000 tokens/min for llama-3.3-70b
+    # With deep research prompts (~2500 tokens each), allow ~15s between calls
+    # Retry up to 3 times with exponential backoff on 429
+    raw = None
+    for attempt in range(3):
+        try:
             raw = call_groq(prompt, groq_api_key)
-        else:
-            raise
+            break
+        except requests.HTTPError as e:
+            if e.response is not None and e.response.status_code == 429:
+                wait = 20 * (attempt + 1)  # 20s, 40s, 60s
+                print(f" [rate limit, waiting {wait}s]", end="", flush=True)
+                time.sleep(wait)
+            else:
+                raise
+    if raw is None:
+        raise RuntimeError("Groq API rate limit — all retries exhausted")
 
     try:
         inst = _parse_groq_response(raw, inst)
@@ -704,10 +1027,10 @@ def research_all(institutions: list[Institution],
         print(f" -> Tier {tier} | Score {score}/30 | Competitor risk: {inst.competitor_risk}")
 
         if groq_api_key:
-            # Groq free tier: 30 RPM — sleep 2s between calls
-            time.sleep(2)
+            # 8B instant model: 30,000 TPM — 5s between calls is safe
+            # 70B versatile model: 6,000 TPM — use --groq-model llama-3.3-70b-versatile + longer sleep
+            time.sleep(5)
         else:
-            # Be polite to web servers
             time.sleep(0.5)
 
     return institutions

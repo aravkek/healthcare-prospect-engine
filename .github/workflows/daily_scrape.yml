@@ -19,6 +19,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt supabase
 
+      - name: Restore private seeds file
+        env:
+          SEEDS_CSV_B64: ${{ secrets.SEEDS_CSV_B64 }}
+        run: echo "$SEEDS_CSV_B64" | base64 -d > seeds.csv
+
       - name: Run discovery and sync to Supabase
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
