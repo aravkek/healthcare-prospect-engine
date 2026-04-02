@@ -20,7 +20,9 @@ from lib.auth import check_auth, is_admin, get_department, render_logout_button
 from lib.db import (
     get_tasks, get_tasks_by_department, create_task,
     update_task, get_team_members, get_activity_feed, log_activity,
+    get_active_sprint, get_sprint_tasks,
 )
+from lib.sprint_widget import render_sprint_widget, render_create_sprint_form
 
 st.set_page_config(
     page_title="Tech Hub — MedPort",
@@ -228,6 +230,14 @@ with tab_sprint:
                 f'</div>',
                 unsafe_allow_html=True,
             )
+
+    # ── My Sprint tasks ───────────────────────────────────────────────────────
+    _sprint = get_active_sprint()
+    if _sprint:
+        _sprint_tasks = get_sprint_tasks(_sprint["id"])
+        render_sprint_widget(_sprint, _sprint_tasks, current_email=email, show_my_tasks=True, admin=admin)
+    elif admin:
+        render_create_sprint_form(email)
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### Sprint Kanban")

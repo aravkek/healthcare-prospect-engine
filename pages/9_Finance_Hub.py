@@ -32,7 +32,10 @@ from lib.db import (
     get_tasks,
     get_tasks_by_department,
     log_activity,
+    get_active_sprint,
+    get_sprint_tasks,
 )
+from lib.sprint_widget import render_sprint_widget, render_create_sprint_form
 
 st.set_page_config(
     page_title="Finance Hub — MedPort",
@@ -150,6 +153,14 @@ with tab_overview:
         page_header("Finance Hub", "Advait's financial command center"),
         unsafe_allow_html=True,
     )
+
+    # ── Sprint widget ─────────────────────────────────────────────────────────
+    _sprint = get_active_sprint()
+    if _sprint:
+        _sprint_tasks = get_sprint_tasks(_sprint["id"])
+        render_sprint_widget(_sprint, _sprint_tasks, current_email=email, show_my_tasks=True, admin=admin)
+    elif admin:
+        render_create_sprint_form(email)
 
     # ── Stat cards ────────────────────────────────────────────────────────────
 

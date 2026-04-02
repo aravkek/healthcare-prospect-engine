@@ -1002,3 +1002,133 @@ def update_one_on_one(record_id: str, updates: dict) -> bool:
     except Exception as e:
         st.error(f"Failed to update 1-on-1: {e}")
         return False
+
+
+# ─── Messages (Team Chat) ─────────────────────────────────────────────────────
+
+def _dm_channel(email_a: str, email_b: str) -> str:
+    """Stable channel ID for a DM between two emails (alphabetically sorted)."""
+    return "dm:" + ":".join(sorted([email_a.lower(), email_b.lower()]))
+
+
+@st.cache_data(ttl=5)
+def get_messages(channel: str, limit: int = 100) -> list[dict]:
+    """Returns messages for a channel, oldest first."""
+    client = get_client()
+    if client is None:
+        return []
+    try:
+        result = (
+            client.table("messages")
+            .select("*")
+            .eq("channel", channel)
+            .order("created_at", desc=False)
+            .limit(limit)
+            .execute()
+        )
+        return result.data or []
+    except Exception:
+        return []
+
+
+def send_message(channel: str, sender_email: str, sender_name: str, content: str) -> bool:
+    """Insert a new message. Returns True on success."""
+    content = content.strip()[:2000]
+    if not content:
+        return False
+    client = get_client()
+    if client is None:
+        return False
+    try:
+        client.table("messages").insert({
+            "channel": channel,
+            "sender_email": sender_email.lower(),
+            "sender_name": sender_name,
+            "content": content,
+        }).execute()
+        get_messages.clear()
+        return True
+    except Exception:
+        return False
+
+
+def get_dm_channel(email_a: str, email_b: str) -> str:
+    return _dm_channel(email_a, email_b)
+
+
+# ─── Sprints ──────────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=20)
+def get_sprints(status: str | None = None) -> list[dict]:
+    """Returns sprints, newest first. Optionally filter by status."""
+    client = get_client()
+    if client is None:
+        return []
+    try:
+        query = client.table("sprints").select("*").order("created_at", desc=True)
+        result = query.execute()
+        sprints = result.data or []
+        if status:
+            sprints = [s for s in sprints if s.get("status") == status]
+        return sprints
+    except Exception:
+        return []
+
+
+def get_active_sprint() -> dict | None:
+    """Returns the most recent active sprint, or None."""
+    sprints = get_sprints(status="active")
+    return sprints[0] if sprints else None
+
+
+def create_sprint(sprint_dict: dict) -> str | None:
+    client = get_client()
+    if client is None:
+        return None
+    try:
+        result = client.table("sprints").insert(sprint_dict).execute()
+        if result.data:
+            get_sprints.clear()
+            return result.data[0].get("id")
+        return None
+    except Exception as e:
+        st.error(f"Failed to create sprint: {e}")
+        return None
+
+
+def update_sprint(sprint_id: str, updates: dict) -> bool:
+    client = get_client()
+    if client is None:
+        return False
+    try:
+        client.table("sprints").update(updates).eq("id", sprint_id).execute()
+        get_sprints.clear()
+        return True
+    except Exception as e:
+        st.error(f"Failed to update sprint: {e}")
+        return False
+
+
+@st.cache_data(ttl=15)
+def get_sprint_tasks(sprint_id: str) -> list[dict]:
+    """Returns all tasks assigned to a sprint."""
+    client = get_client()
+    if client is None:
+        return []
+    try:
+        result = (
+            client.table("tasks")
+            .select("*")
+            .eq("sprint_id", sprint_id)
+            .order("created_at", desc=False)
+            .execute()
+        )
+        return result.data or []
+    except Exception:
+        return []
+
+
+def get_my_sprint_tasks(sprint_id: str, email: str) -> list[dict]:
+    """Returns sprint tasks assigned to a specific email."""
+    tasks = get_sprint_tasks(sprint_id)
+    return [t for t in tasks if email.lower() in [a.lower() for a in (t.get("assigned_to") or [])]]

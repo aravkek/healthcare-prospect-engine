@@ -19,8 +19,9 @@ from lib.styles import (
     MEDPORT_LIGHT_BLUE, MEDPORT_LIGHT_GREEN, MEDPORT_LIGHT_TEAL
 )
 from lib.auth import check_auth, is_admin, render_logout_button, get_department
-from lib.db import load_prospects, get_activity_feed, get_tasks, get_goals, get_announcements, get_unread_announcement_count, mark_announcement_read
+from lib.db import load_prospects, get_activity_feed, get_tasks, get_goals, get_announcements, get_unread_announcement_count, mark_announcement_read, get_active_sprint, get_sprint_tasks
 from lib.nav import render_sidebar_nav
+from lib.sprint_widget import render_sprint_widget, render_create_sprint_form
 
 # ─── Page config — must be first Streamlit call ──────────────────────────────
 st.set_page_config(
@@ -203,6 +204,17 @@ for col, val, label in [
         )
 
 st.markdown("<br>", unsafe_allow_html=True)
+
+# ─── Sprint widget ───────────────────────────────────────────────────────────
+_sprint = get_active_sprint()
+if _sprint:
+    _sprint_tasks = get_sprint_tasks(_sprint["id"])
+    st.markdown("### Current Sprint")
+    render_sprint_widget(_sprint, _sprint_tasks, current_email=email, show_my_tasks=False, admin=admin)
+    st.markdown("<br>", unsafe_allow_html=True)
+elif admin:
+    render_create_sprint_form(email)
+    st.markdown("<br>", unsafe_allow_html=True)
 
 # ─── Two-column layout: activity + navigation ─────────────────────────────────
 left, right = st.columns([3, 2])
