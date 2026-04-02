@@ -198,9 +198,10 @@ def render_institution_card(row: pd.Series, queue_mode: bool = False, key_prefix
                 st.markdown(" &nbsp;".join(badge_parts), unsafe_allow_html=True)
         with profile_btn_col:
             st.page_link(
-                f"pages/16_Prospect_Profile.py?id={prospect_id}",
+                "pages/16_Prospect_Profile.py",
                 label="Full Profile →",
                 use_container_width=True,
+                query_params={"id": prospect_id},
             )
 
         st.markdown('<hr class="subtle">', unsafe_allow_html=True)
