@@ -151,9 +151,17 @@ if admin:
     with st.container():
         ic_col1, ic_col2 = st.columns([2, 3])
         with ic_col1:
+            def _member_label(m_name):
+                for dm in _dynamic_members:
+                    if dm["name"] == m_name:
+                        role = dm.get("role", "")
+                        return f"{m_name} — {role}" if role else m_name
+                return m_name
+
             ic_member = st.selectbox(
                 "Team member *",
                 [m["name"] for m in _dynamic_members] if _dynamic_members else [m for m in TEAM_MEMBERS if m != "Unassigned"],
+                format_func=_member_label,
                 key="ic_member",
             )
             ic_type = st.selectbox(
@@ -172,22 +180,15 @@ if admin:
 
         if st.button("Issue Card", type="primary", key="do_issue_card"):
             if ic_reason.strip():
-                # Look up member email from TEAM_EMAILS or use placeholder
-                from lib.styles import TEAM_EMAILS
-                import os as _os
-                try:
-                    team_email_map = {}
-                    raw = st.secrets.get("TEAM_MEMBER_EMAILS", "")
-                    if raw:
-                        for pair in raw.split(","):
-                            if ":" in pair:
-                                k, v = pair.split(":", 1)
-                                team_email_map[k.strip()] = v.strip()
-                    team_email_map.update(TEAM_EMAILS)
-                except Exception:
-                    team_email_map = TEAM_EMAILS
-
-                member_email_val = team_email_map.get(ic_member, f"{ic_member.lower().replace(' ', '.')}@medport.ca")
+                # Look up email from team_members DB record
+                member_email_val = ""
+                for dm in _dynamic_members:
+                    if dm["name"] == ic_member:
+                        member_email_val = dm.get("email") or ""
+                        break
+                if not member_email_val:
+                    # Fallback: derive placeholder so card still records
+                    member_email_val = f"{ic_member.lower().replace(' ', '.')}@medport.ca"
 
                 card_dict = {
                     "member_email": member_email_val,

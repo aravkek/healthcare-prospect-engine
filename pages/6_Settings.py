@@ -56,6 +56,34 @@ st.markdown(
 
 members = get_team_members()
 
+# ─── Quick-seed founding team (admin, empty DB only) ─────────────────────────
+
+if admin and not members:
+    st.warning("No team members found. Add your founding team below, or use Quick Seed to add all 5 co-founders at once.")
+    if st.button("Quick Seed — Add MedPort Founding Team", type="primary", key="quick_seed"):
+        # Pre-populate the 5 co-founders. Emails are placeholders — edit after seeding.
+        founding_team = [
+            {"name": "Arav Kekane",   "role": "CEO & Co-Founder",  "email": "aravkekane@gmail.com",   "department": "leadership"},
+            {"name": "Advait",        "role": "CFO & Co-Founder",  "email": "",                       "department": "finance"},
+            {"name": "Ahan",          "role": "CMO & Co-Founder",  "email": "",                       "department": "marketing"},
+            {"name": "Aarya",         "role": "CTO & Co-Founder",  "email": "",                       "department": "tech"},
+            {"name": "Nathen",        "role": "COO & Co-Founder",  "email": "",                       "department": "operations"},
+        ]
+        from lib.styles import DEPT_COLORS as _DC
+        for i, p in enumerate(founding_team):
+            dc = _DC.get(p["department"], MEDPORT_TEAL)
+            create_team_member({
+                "name": p["name"], "role": p["role"],
+                "email": p["email"] or None,
+                "department": p["department"],
+                "department_color": dc, "avatar_color": dc,
+                "is_active": True, "sort_order": i,
+            })
+        get_team_members.clear()
+        st.success("Founding team seeded! Edit each member to add their login emails.")
+        st.rerun()
+    st.markdown("---")
+
 # ─── Team Directory (visible to everyone) ────────────────────────────────────
 
 st.markdown(f"### Team ({len(members)} members)")
@@ -160,13 +188,23 @@ if admin:
     st.markdown("---")
     st.markdown("### Add Team Member")
 
+    st.markdown(
+        f'<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;'
+        f'padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.85rem;color:#1e40af;">'
+        f'<b>Email = login identity.</b> Enter the exact Gmail address this person uses to sign into MedPort. '
+        f'This is how the system knows which team member is which when they log in. '
+        f'Cards, tasks, and activity will be linked to this email.'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        new_name = st.text_input("Name *", key="new_name", placeholder="e.g. Sarah")
+        new_name = st.text_input("Full Name *", key="new_name", placeholder="e.g. Ahan Sharma")
     with c2:
-        new_role = st.text_input("Role *", key="new_role", placeholder="e.g. CTO & Co-Founder")
+        new_role = st.text_input("Title / Position *", key="new_role", placeholder="e.g. CMO & Co-Founder")
     with c3:
-        new_email = st.text_input("Email (optional)", key="new_email", placeholder="sarah@medport.ca")
+        new_email = st.text_input("Login Email *", key="new_email", placeholder="ahan@gmail.com",
+                                   help="The Gmail they use to sign in. Must match exactly.")
     with c4:
         new_dept = st.selectbox(
             "Department",
@@ -177,13 +215,19 @@ if admin:
         )
 
     if st.button("Add Member", type="primary", key="do_add"):
-        if new_name.strip() and new_role.strip():
+        if not new_name.strip():
+            st.warning("Full name is required.")
+        elif not new_role.strip():
+            st.warning("Title / Position is required.")
+        elif not new_email.strip():
+            st.warning("Login email is required — it's how the system identifies this person.")
+        else:
             sort_order = max((m.get("sort_order", 0) for m in members), default=-1) + 1
             dept_color = DEPT_COLORS.get(new_dept, MEDPORT_TEAL)
             mid = create_team_member({
                 "name": new_name.strip(),
                 "role": new_role.strip(),
-                "email": new_email.strip() or None,
+                "email": new_email.strip().lower(),
                 "department": new_dept,
                 "department_color": dept_color,
                 "avatar_color": dept_color,
@@ -191,10 +235,8 @@ if admin:
                 "sort_order": sort_order,
             })
             if mid:
-                st.success(f"Added {new_name.strip()}.")
+                st.success(f"Added {new_name.strip()}. They can now sign in with {new_email.strip().lower()}.")
                 st.rerun()
-        else:
-            st.warning("Name and Role are both required.")
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("---")
