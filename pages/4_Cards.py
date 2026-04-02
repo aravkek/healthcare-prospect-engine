@@ -14,11 +14,11 @@ import streamlit as st
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from lib.styles import (
-    inject_css, MEDPORT_BLUE, MEDPORT_GREEN, TEAM_MEMBERS,
+    inject_css, MEDPORT_BLUE, MEDPORT_GREEN, MEDPORT_TEAL, TEAM_MEMBERS,
     CARD_GREY, CARD_YELLOW, CARD_RED,
 )
 from lib.auth import check_auth, is_admin
-from lib.db import get_cards, issue_card, get_card_summary, log_activity
+from lib.db import get_cards, issue_card, get_card_summary, log_activity, get_team_members
 
 st.set_page_config(
     page_title="Cards — MedPort",
@@ -35,10 +35,10 @@ admin = is_admin(email)
 
 with st.sidebar:
     st.markdown(
-        f'<span style="font-size:1.1rem;font-weight:800;color:{MEDPORT_BLUE};">Cards</span>',
+        f'<span style="font-size:1.1rem;font-weight:800;color:{MEDPORT_TEAL};">Cards</span>',
         unsafe_allow_html=True,
     )
-    st.markdown(f"<div style='font-size:0.8rem;color:#6b7a8d;'>{name}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-size:0.8rem;color:#94a3b8;'>{name}</div>", unsafe_allow_html=True)
     st.markdown("---")
 
     try:
@@ -93,9 +93,10 @@ st.markdown("")
 st.markdown(f"### Team Standing")
 
 card_summary = get_card_summary()
+_dynamic_members = get_team_members()
 
 # Make sure all team members appear (even if no cards)
-all_members = [m for m in TEAM_MEMBERS if m != "Unassigned"]
+all_members = [m["name"] for m in _dynamic_members] if _dynamic_members else [m for m in TEAM_MEMBERS if m != "Unassigned"]
 member_cols = st.columns(len(all_members))
 
 STATUS_DISPLAY = {
@@ -107,6 +108,13 @@ STATUS_DISPLAY = {
 }
 
 for i, member in enumerate(all_members):
+    # Get avatar color from dynamic member list
+    member_avatar_color = MEDPORT_TEAL
+    for dm in _dynamic_members:
+        if dm["name"] == member:
+            member_avatar_color = dm.get("avatar_color", MEDPORT_TEAL)
+            break
+
     with member_cols[i]:
         # Find this member's summary by name (matching)
         member_data = None
@@ -126,7 +134,7 @@ for i, member in enumerate(all_members):
         st.markdown(
             f"""
             <div class="member-card">
-              <div class="member-avatar">{initials}</div>
+              <div class="member-avatar" style="background:linear-gradient(135deg,{member_avatar_color},{MEDPORT_BLUE});">{initials}</div>
               <div class="member-name">{member}</div>
               <div style="margin: 0.5rem 0;">
                 <span class="card-grey">Grey: {grey_n}</span>&nbsp;
@@ -151,7 +159,7 @@ if admin:
         with ic_col1:
             ic_member = st.selectbox(
                 "Team member *",
-                [m for m in TEAM_MEMBERS if m != "Unassigned"],
+                [m["name"] for m in _dynamic_members] if _dynamic_members else [m for m in TEAM_MEMBERS if m != "Unassigned"],
                 key="ic_member",
             )
             ic_type = st.selectbox(

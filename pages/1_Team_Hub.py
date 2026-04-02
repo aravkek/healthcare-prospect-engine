@@ -12,9 +12,9 @@ import streamlit as st
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from lib.styles import inject_css, MEDPORT_BLUE, MEDPORT_GREEN, TEAM_MEMBERS, TASK_STATUS_COLORS
+from lib.styles import inject_css, MEDPORT_BLUE, MEDPORT_GREEN, MEDPORT_TEAL, TASK_STATUS_COLORS
 from lib.auth import check_auth, is_admin
-from lib.db import load_prospects, get_activity_feed, get_tasks, get_goals
+from lib.db import load_prospects, get_activity_feed, get_tasks, get_goals, get_team_members
 
 st.set_page_config(
     page_title="Team Hub — MedPort",
@@ -94,10 +94,10 @@ def _week_start() -> datetime:
 
 with st.sidebar:
     st.markdown(
-        f'<span style="font-size:1.1rem;font-weight:800;color:{MEDPORT_BLUE};">MedPort</span>',
+        f'<span style="font-size:1.1rem;font-weight:800;color:{MEDPORT_TEAL};">MedPort</span>',
         unsafe_allow_html=True,
     )
-    st.markdown(f"<div style='font-size:0.8rem;color:#6b7a8d;'>Signed in as <b>{name}</b></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-size:0.8rem;color:#94a3b8;'>Signed in as <b>{name}</b></div>", unsafe_allow_html=True)
     st.markdown("---")
 
     try:
@@ -125,6 +125,7 @@ df = load_prospects()
 all_tasks = get_tasks()
 goals = get_goals()
 activities = get_activity_feed(limit=30)
+members = get_team_members()
 
 week_start = _week_start()
 
@@ -179,18 +180,21 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 st.markdown(f"### Team Overview")
 
-_active_members = [m for m in TEAM_MEMBERS if m != "Unassigned"]
-member_cols = st.columns(len(_active_members))
-for idx, member in enumerate(_active_members):
+num_members = max(len(members), 1)
+member_cols = st.columns(num_members)
+for idx, member in enumerate(members):
+    member_name = member["name"]
+    member_role = member.get("role", "Team Member")
+    avatar_color = member.get("avatar_color", MEDPORT_TEAL)
     with member_cols[idx]:
         # Prospects assigned
         if not df.empty and "assigned_to" in df.columns:
-            assigned_count = len(df[df["assigned_to"] == member])
+            assigned_count = len(df[df["assigned_to"] == member_name])
         else:
             assigned_count = 0
 
         # Tasks
-        member_tasks = [t for t in all_tasks if member in (t.get("assigned_to") or [])]
+        member_tasks = [t for t in all_tasks if member_name in (t.get("assigned_to") or [])]
         open_member = sum(1 for t in member_tasks if t.get("status") in ("open", "in_progress"))
         completed_member = sum(
             1 for t in member_tasks
@@ -198,20 +202,21 @@ for idx, member in enumerate(_active_members):
             and datetime.fromisoformat(t["completed_at"].replace("Z", "+00:00")) >= week_start
         )
 
-        initials = "".join(w[0].upper() for w in member.split()[:2])
+        initials = "".join(w[0].upper() for w in member_name.split()[:2])
         st.markdown(
             f"""
             <div class="member-card">
-              <div class="member-avatar">{initials}</div>
-              <div class="member-name">{member}</div>
-              <div class="member-stat" style="margin-top:0.4rem;">
-                <b style="color:{MEDPORT_BLUE};">{assigned_count}</b> prospects
+              <div class="member-avatar" style="background:linear-gradient(135deg,{avatar_color},{MEDPORT_BLUE});">{initials}</div>
+              <div class="member-name">{member_name}</div>
+              <div class="member-role">{member_role}</div>
+              <div class="member-stat" style="margin-top:0.5rem;">
+                <b style="color:{MEDPORT_TEAL};">{assigned_count}</b> prospects
               </div>
               <div class="member-stat">
-                <b style="color:#8e44ad;">{open_member}</b> tasks open
+                <b style="color:#8b5cf6;">{open_member}</b> tasks open
               </div>
               <div class="member-stat">
-                <b style="color:{MEDPORT_GREEN};">{completed_member}</b> completed this week
+                <b style="color:{MEDPORT_TEAL};">{completed_member}</b> done this week
               </div>
             </div>
             """,
@@ -270,9 +275,9 @@ with col_goals:
             metric = goal.get("metric_type", "custom").replace("_", " ").title()
 
             if pct >= 80:
-                bar_color = MEDPORT_GREEN
+                bar_color = MEDPORT_TEAL
             elif pct >= 50:
-                bar_color = "#f39c12"
+                bar_color = "#f59e0b"
             else:
                 bar_color = MEDPORT_BLUE
 

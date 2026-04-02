@@ -507,3 +507,118 @@ def increment_search_use_count(search_id: str):
             client.table("saved_searches").update({"use_count": current + 1}).eq("id", search_id).execute()
     except Exception:
         pass
+
+
+# ─── Team Members ─────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=30)
+def get_team_members() -> list[dict]:
+    """
+    Returns team members from Supabase team_members table, ordered by sort_order.
+    Falls back to hardcoded TEAM_MEMBERS from styles.py if the table doesn't exist or is empty.
+    Each member dict: {id, name, role, email, avatar_color, is_active, sort_order}
+    """
+    from lib.styles import TEAM_MEMBERS, MEDPORT_TEAL
+
+    client = get_client()
+    if client is None:
+        # Fallback to hardcoded list
+        return [
+            {
+                "id": str(i),
+                "name": m,
+                "role": "Team Member",
+                "email": "",
+                "avatar_color": MEDPORT_TEAL,
+                "is_active": True,
+                "sort_order": i,
+            }
+            for i, m in enumerate(TEAM_MEMBERS)
+            if m != "Unassigned"
+        ]
+
+    try:
+        result = (
+            client.table("team_members")
+            .select("*")
+            .eq("is_active", True)
+            .order("sort_order")
+            .execute()
+        )
+        members = result.data or []
+        if members:
+            return members
+        # Table exists but empty — fall back to hardcoded list
+        return [
+            {
+                "id": str(i),
+                "name": m,
+                "role": "Team Member",
+                "email": "",
+                "avatar_color": MEDPORT_TEAL,
+                "is_active": True,
+                "sort_order": i,
+            }
+            for i, m in enumerate(TEAM_MEMBERS)
+            if m != "Unassigned"
+        ]
+    except Exception:
+        # Table doesn't exist yet — fall back gracefully
+        from lib.styles import TEAM_MEMBERS, MEDPORT_TEAL
+        return [
+            {
+                "id": str(i),
+                "name": m,
+                "role": "Team Member",
+                "email": "",
+                "avatar_color": MEDPORT_TEAL,
+                "is_active": True,
+                "sort_order": i,
+            }
+            for i, m in enumerate(TEAM_MEMBERS)
+            if m != "Unassigned"
+        ]
+
+
+def create_team_member(member_dict: dict) -> str | None:
+    """Insert a new team member. Returns the new member ID or None on failure."""
+    client = get_client()
+    if client is None:
+        return None
+    try:
+        result = client.table("team_members").insert(member_dict).execute()
+        if result.data:
+            get_team_members.clear()
+            return result.data[0].get("id")
+        return None
+    except Exception as e:
+        st.error(f"Failed to create team member: {e}")
+        return None
+
+
+def update_team_member(member_id: str, updates: dict) -> bool:
+    """Update team member fields. Returns True on success."""
+    client = get_client()
+    if client is None:
+        return False
+    try:
+        client.table("team_members").update(updates).eq("id", member_id).execute()
+        get_team_members.clear()
+        return True
+    except Exception as e:
+        st.error(f"Failed to update team member: {e}")
+        return False
+
+
+def delete_team_member(member_id: str) -> bool:
+    """Soft-delete a team member (set is_active=False). Returns True on success."""
+    client = get_client()
+    if client is None:
+        return False
+    try:
+        client.table("team_members").update({"is_active": False}).eq("id", member_id).execute()
+        get_team_members.clear()
+        return True
+    except Exception as e:
+        st.error(f"Failed to remove team member: {e}")
+        return False

@@ -101,3 +101,22 @@ ALTER TABLE prospects ADD COLUMN IF NOT EXISTS emr_system text;
 ALTER TABLE prospects ADD COLUMN IF NOT EXISTS patient_volume text;
 ALTER TABLE prospects ADD COLUMN IF NOT EXISTS existing_ai_tools text;
 ALTER TABLE prospects ADD COLUMN IF NOT EXISTS phone_intake_evidence text;
+
+-- ─── Team Members ──────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS team_members (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  role text NOT NULL DEFAULT 'Team Member',
+  email text,
+  avatar_color text DEFAULT '#00B89F',
+  is_active boolean DEFAULT true,
+  sort_order int DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "anon_all_members" ON team_members FOR ALL USING (true) WITH CHECK (true);
+
+-- Seed with default team (only inserts if name doesn't already exist)
+INSERT INTO team_members (name, role, email, sort_order)
+SELECT 'Arav', 'CEO & Co-Founder', 'aravkekane@gmail.com', 0
+WHERE NOT EXISTS (SELECT 1 FROM team_members WHERE name = 'Arav');

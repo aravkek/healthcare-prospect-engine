@@ -12,13 +12,13 @@ import streamlit as st
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from lib.styles import (
-    inject_css, MEDPORT_BLUE, MEDPORT_GREEN, TEAM_MEMBERS,
+    inject_css, MEDPORT_BLUE, MEDPORT_GREEN, MEDPORT_TEAL, TEAM_MEMBERS,
     PRIORITY_COLORS, TASK_STATUS_COLORS,
 )
 from lib.auth import check_auth, is_admin
 from lib.db import (
     load_prospects, get_tasks, create_task, update_task,
-    get_goals, create_goal, update_goal, log_activity,
+    get_goals, create_goal, update_goal, log_activity, get_team_members,
 )
 
 st.set_page_config(
@@ -57,10 +57,10 @@ def _due_label(due_str: str | None) -> str:
 
 with st.sidebar:
     st.markdown(
-        f'<span style="font-size:1.1rem;font-weight:800;color:{MEDPORT_BLUE};">Tasks</span>',
+        f'<span style="font-size:1.1rem;font-weight:800;color:{MEDPORT_TEAL};">Tasks</span>',
         unsafe_allow_html=True,
     )
-    st.markdown(f"<div style='font-size:0.8rem;color:#6b7a8d;'>{name}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-size:0.8rem;color:#94a3b8;'>{name}</div>", unsafe_allow_html=True)
     st.markdown("---")
 
     try:
@@ -80,6 +80,8 @@ with st.sidebar:
 all_tasks = get_tasks()
 goals = get_goals()
 df = load_prospects()
+_dynamic_members = get_team_members()
+_dynamic_member_names = [m["name"] for m in _dynamic_members]
 prospect_options = (
     [{"id": "", "name": "None"}]
     + [{"id": str(row["id"]), "name": row.get("name", "")} for _, row in df.iterrows()]
@@ -106,7 +108,7 @@ if admin:
         with t_col1:
             t_assigned = st.multiselect(
                 "Assign to *",
-                [m for m in TEAM_MEMBERS if m != "Unassigned"],
+                _dynamic_member_names,
                 key="new_task_assigned",
             )
             t_type = st.selectbox(
@@ -258,7 +260,7 @@ with right_col:
                 tasks_by_assignee[assignee].append(t)
 
     # Show each team member
-    member_tabs = [m for m in TEAM_MEMBERS if m != "Unassigned"]
+    member_tabs = _dynamic_member_names if _dynamic_member_names else [m for m in TEAM_MEMBERS if m != "Unassigned"]
     if member_tabs:
         tabs = st.tabs(member_tabs)
         for i, member in enumerate(member_tabs):
@@ -357,7 +359,7 @@ if active_goals:
             due = goal.get("due_date", "")
             metric = goal.get("metric_type", "custom").replace("_", " ").title()
 
-            bar_color = MEDPORT_GREEN if pct >= 80 else ("#f39c12" if pct >= 50 else MEDPORT_BLUE)
+            bar_color = MEDPORT_TEAL if pct >= 80 else ("#f59e0b" if pct >= 50 else MEDPORT_BLUE)
 
             st.markdown(
                 f"""
@@ -409,7 +411,7 @@ if completed_goals:
             target = max(1, goal.get("target_value", 1))
             current = goal.get("current_value", 0)
             st.markdown(
-                f'<span style="color:{MEDPORT_GREEN};font-weight:700;">✓</span> '
+                f'<span style="color:{MEDPORT_TEAL};font-weight:700;">✓</span> '
                 f'**{goal.get("title", "")}** — {current}/{target}',
                 unsafe_allow_html=True,
             )

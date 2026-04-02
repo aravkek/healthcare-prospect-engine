@@ -16,13 +16,14 @@ import streamlit as st
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from lib.styles import (
-    inject_css, MEDPORT_BLUE, MEDPORT_GREEN, MEDPORT_LIGHT_BLUE,
+    inject_css, MEDPORT_BLUE, MEDPORT_GREEN, MEDPORT_TEAL, MEDPORT_LIGHT_BLUE,
     STATUS_ORDER, STATUS_LABELS, STATUS_COLORS, PIPELINE_STAGES, TEAM_MEMBERS,
 )
 from lib.auth import check_auth, is_admin
 from lib.db import (
     load_prospects, update_prospect, log_activity,
     get_saved_searches, save_search, delete_saved_search, increment_search_use_count,
+    get_team_members,
 )
 
 st.set_page_config(
@@ -35,6 +36,10 @@ inject_css()
 
 name, email = check_auth()
 admin = is_admin(email)
+
+# ─── Dynamic team members ────────────────────────────────────────────────────
+_team_members_dynamic = get_team_members()
+_dynamic_member_names = ["Unassigned"] + [m["name"] for m in _team_members_dynamic]
 
 # ─── Badge helpers ───────────────────────────────────────────────────────────
 
@@ -253,12 +258,12 @@ def render_institution_card(row: pd.Series, queue_mode: bool = False, key_prefix
 
         with crm2:
             try:
-                assign_idx = TEAM_MEMBERS.index(current_assigned)
+                assign_idx = _dynamic_member_names.index(current_assigned)
             except ValueError:
                 assign_idx = 0
             new_assigned = st.selectbox(
                 "Assigned to",
-                TEAM_MEMBERS,
+                _dynamic_member_names,
                 index=assign_idx,
                 key=f"{key_prefix}assign_{prospect_id}",
             )
@@ -297,10 +302,10 @@ def render_institution_card(row: pd.Series, queue_mode: bool = False, key_prefix
 
 with st.sidebar:
     st.markdown(
-        f'<span style="font-size:1.1rem;font-weight:800;color:{MEDPORT_BLUE};">MedPort CRM</span>',
+        f'<span style="font-size:1.1rem;font-weight:800;color:{MEDPORT_TEAL};">MedPort CRM</span>',
         unsafe_allow_html=True,
     )
-    st.markdown(f"<div style='font-size:0.8rem;color:#6b7a8d;'>{name}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-size:0.8rem;color:#94a3b8;'>{name}</div>", unsafe_allow_html=True)
     st.markdown("---")
 
     try:
@@ -330,7 +335,7 @@ with st.sidebar:
         "Status", STATUS_ORDER, default=STATUS_ORDER,
         format_func=lambda s: STATUS_LABELS.get(s, s), key="crm_statuses",
     )
-    selected_assignee = st.selectbox("Assigned to", ["All"] + TEAM_MEMBERS, key="crm_assignee")
+    selected_assignee = st.selectbox("Assigned to", ["All"] + _dynamic_member_names, key="crm_assignee")
     min_score = st.slider("Min Score (out of 40)", 0, 40, 0, 1, key="crm_min_score")
 
     st.markdown("---")
@@ -511,6 +516,31 @@ for col, val, label in [
 
 st.markdown("")
 
+# ─── Filter status bar ───────────────────────────────────────────────────────
+
+active_filters = []
+if country_opt != "Both":
+    active_filters.append(f"Market: {country_opt}")
+if my_only:
+    active_filters.append("My prospects only")
+if selected_tiers != ["A", "B", "C"]:
+    active_filters.append(f"Tier: {', '.join(selected_tiers)}")
+if min_score > 0:
+    active_filters.append(f"Score ≥ {min_score}")
+if selected_assignee != "All":
+    active_filters.append(f"Assigned: {selected_assignee}")
+
+if active_filters:
+    tags_html = " ".join(f'<span class="filter-tag">{f}</span>' for f in active_filters)
+    st.markdown(
+        f'<div class="filter-bar">'
+        f'<span style="font-weight:600;color:#475569;">Showing {len(filtered)} of {len(df)}</span>'
+        f'<span style="color:#cbd5e1;">·</span>'
+        f'{tags_html}'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
 # ─── Queue alert ─────────────────────────────────────────────────────────────
 
 QUEUE_SIZE = 15
@@ -543,7 +573,7 @@ with tab_queue:
         "**Your Outreach Queue** — Top uncontacted Tier A prospects, sorted by score. "
         "Email them, then move the status to *Email Sent*. The queue auto-refills as you work through it."
     )
-    queue_show = df[(df["priority_rank"] == 1) & (df["status"] == "not_contacted")].sort_values(
+    queue_show = filtered[(filtered["priority_rank"] == 1) & (filtered["status"] == "not_contacted")].sort_values(
         "composite_score", ascending=False
     ).head(QUEUE_SIZE)
     if queue_show.empty:

@@ -6,16 +6,23 @@ Import inject_css() at the top of every page after set_page_config().
 import streamlit as st
 
 # ─── Brand colors ───────────────────────────────────────────────────────────
-MEDPORT_BLUE = "#1B4F72"
-MEDPORT_GREEN = "#1a8a4a"
-MEDPORT_WHITE = "#ffffff"
-MEDPORT_LIGHT_GREEN = "#f0f8f4"
-MEDPORT_LIGHT_BLUE = "#eaf4fb"
+MEDPORT_TEAL = "#00B89F"
+MEDPORT_BLUE = "#3B7EFF"
+MEDPORT_DARK = "#0F172A"
+MEDPORT_DARK_CARD = "#1E293B"
+MEDPORT_WHITE = "#FFFFFF"
+MEDPORT_BG = "#f0fdfb"
+MEDPORT_LIGHT_TEAL = "#e6faf8"
+MEDPORT_LIGHT_BLUE = "#eff6ff"
+
+# Backward compat — old references won't break
+MEDPORT_GREEN = MEDPORT_TEAL
+MEDPORT_LIGHT_GREEN = MEDPORT_LIGHT_TEAL
 
 # ─── Card system colors ──────────────────────────────────────────────────────
-CARD_GREY = "#9e9e9e"
-CARD_YELLOW = "#f39c12"
-CARD_RED = "#e74c3c"
+CARD_GREY = "#94a3b8"
+CARD_YELLOW = "#f59e0b"
+CARD_RED = "#ef4444"
 
 # ─── Status pipeline ────────────────────────────────────────────────────────
 STATUS_ORDER = [
@@ -37,12 +44,12 @@ STATUS_LABELS = {
 }
 
 STATUS_COLORS = {
-    "not_contacted": "#8e9db4",
-    "email_sent": "#2980b9",
-    "pending_response": "#f39c12",
-    "demo_booked": "#8e44ad",
-    "converted": "#1a8a4a",
-    "declined": "#c0392b",
+    "not_contacted": "#64748b",
+    "email_sent": "#3B7EFF",
+    "pending_response": "#f59e0b",
+    "demo_booked": "#8b5cf6",
+    "converted": "#00B89F",
+    "declined": "#ef4444",
 }
 
 PIPELINE_STAGES = ["not_contacted", "email_sent", "pending_response", "demo_booked", "converted"]
@@ -56,223 +63,468 @@ TEAM_EMAILS = {
 }
 
 PRIORITY_COLORS = {
-    "low": "#6c757d",
-    "medium": "#2980b9",
-    "high": "#f39c12",
-    "urgent": "#e74c3c",
+    "low": "#64748b",
+    "medium": "#3B7EFF",
+    "high": "#f59e0b",
+    "urgent": "#ef4444",
 }
 
 TASK_STATUS_COLORS = {
-    "open": "#2980b9",
-    "in_progress": "#8e44ad",
-    "completed": "#1a8a4a",
-    "blocked": "#e74c3c",
+    "open": "#3B7EFF",
+    "in_progress": "#8b5cf6",
+    "completed": "#00B89F",
+    "blocked": "#ef4444",
 }
+
+
+def page_header(title: str, subtitle: str = "") -> str:
+    """Returns HTML for a consistent page header — dark, heavy weight, no gradient text."""
+    subtitle_html = (
+        f'<div style="color:#475569;font-size:0.9rem;margin-top:0.25rem;font-weight:400;">{subtitle}</div>'
+        if subtitle else ""
+    )
+    return f"""
+<div style="margin-bottom:1.5rem;">
+  <div style="font-size:1.9rem;font-weight:800;line-height:1.15;color:{MEDPORT_DARK};font-family:'Syne',sans-serif;">{title}</div>
+  {subtitle_html}
+</div>
+"""
 
 
 def get_css() -> str:
     return f"""
 <style>
-/* ── Base ── */
-.main .block-container {{ padding-top: 1.2rem; padding-bottom: 2rem; }}
-h1 {{ color: {MEDPORT_BLUE}; font-weight: 800; letter-spacing: -0.5px; }}
-h2, h3 {{ color: {MEDPORT_BLUE}; }}
-section[data-testid="stSidebar"] {{ background: {MEDPORT_LIGHT_GREEN}; }}
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap');
 
-/* ── Stat cards ── */
-.stat-card {{
-  background: #fff;
-  border: 1px solid #e0e7ef;
-  border-radius: 12px;
-  padding: 1rem 1.2rem;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(27,79,114,0.07);
+/* ── Base ── */
+html, body, [class*="css"] {{ font-family: 'DM Sans', sans-serif; }}
+h1, h2, h3 {{ font-family: 'Syne', 'DM Sans', sans-serif; font-weight: 800; color: {MEDPORT_DARK}; }}
+.main .block-container {{ padding-top: 1.5rem; padding-bottom: 2rem; }}
+.main {{ background: #f8fafc; }}
+
+/* ── Sidebar — dark theme ── */
+section[data-testid="stSidebar"] {{
+  background: {MEDPORT_DARK};
+  color: white;
+  border-right: 1px solid #1e293b;
 }}
-.stat-card .stat-value {{ font-size: 2rem; font-weight: 800; color: {MEDPORT_BLUE}; line-height: 1; }}
-.stat-card .stat-label {{ font-size: 0.75rem; color: #6b7a8d; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.3rem; }}
+section[data-testid="stSidebar"] * {{ color: white; }}
+section[data-testid="stSidebar"] .stMarkdown p,
+section[data-testid="stSidebar"] .stMarkdown span,
+section[data-testid="stSidebar"] label {{
+  color: #cbd5e1;
+}}
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3 {{
+  color: white;
+}}
+section[data-testid="stSidebar"] hr {{
+  border-color: #334155;
+}}
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a {{
+  color: #94a3b8;
+  border-radius: 8px;
+  padding: 6px 10px;
+  transition: all 0.2s;
+}}
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {{
+  color: {MEDPORT_TEAL};
+  background: rgba(0,184,159,0.08);
+}}
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[aria-current="page"] {{
+  color: {MEDPORT_TEAL};
+  background: rgba(0,184,159,0.1);
+  font-weight: 600;
+}}
+section[data-testid="stSidebar"] button {{
+  color: white;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+}}
+section[data-testid="stSidebar"] button:hover {{
+  background: rgba(0,184,159,0.15);
+  border-color: {MEDPORT_TEAL};
+}}
+section[data-testid="stSidebar"] .stToggle label {{
+  color: #94a3b8;
+}}
+section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] > div {{
+  background: #1e293b;
+  border-color: #334155;
+  color: white;
+}}
+section[data-testid="stSidebar"] .stMultiSelect div[data-baseweb="select"] > div {{
+  background: #1e293b;
+  border-color: #334155;
+  color: white;
+}}
+section[data-testid="stSidebar"] .stSlider label {{
+  color: #94a3b8;
+}}
+section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] {{
+  color: #94a3b8;
+  border-radius: 8px;
+  transition: all 0.2s;
+  padding: 4px 8px;
+}}
+section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"]:hover {{
+  color: {MEDPORT_TEAL};
+  background: rgba(0,184,159,0.1);
+}}
+
+/* ── Badge base class ── */
+.mp-badge {{
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  display: inline-block;
+}}
+
+/* ── Stat cards — Linear aesthetic ── */
+.stat-card {{
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.1rem 1.3rem;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: box-shadow 0.2s ease;
+}}
+.stat-card:hover {{
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}}
+.stat-card .stat-value {{
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: {MEDPORT_DARK};
+  font-family: 'Syne', sans-serif;
+}}
+.stat-card .stat-label {{
+  font-size: 0.72rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-top: 0.35rem;
+  font-weight: 600;
+}}
 
 /* ── Funnel ── */
-.funnel-row {{ display: flex; gap: 0; flex-wrap: nowrap; margin-bottom: 1rem; overflow-x: auto; }}
+.funnel-row {{ display: flex; gap: 0; flex-wrap: nowrap; margin-bottom: 1rem; overflow-x: auto; border-radius: 10px; overflow: hidden; }}
 .funnel-step {{
-  flex: 1; min-width: 90px; padding: 0.55rem 0.4rem;
+  flex: 1; min-width: 90px; padding: 0.6rem 0.4rem;
   text-align: center; font-size: 0.75rem; font-weight: 600; color: #fff;
   position: relative;
 }}
-.funnel-step .funnel-count {{ font-size: 1.4rem; font-weight: 800; display: block; line-height: 1; }}
-.funnel-step .funnel-label {{ font-size: 0.7rem; opacity: 0.9; margin-top: 2px; display: block; }}
+.funnel-step .funnel-count {{ font-size: 1.4rem; font-weight: 800; display: block; line-height: 1; font-family: 'Syne', sans-serif; }}
+.funnel-step .funnel-label {{ font-size: 0.68rem; opacity: 0.9; margin-top: 3px; display: block; }}
 .funnel-step:not(:last-child)::after {{
   content: '›'; position: absolute; right: -6px; top: 50%; transform: translateY(-50%);
-  font-size: 1.2rem; color: rgba(255,255,255,0.6); z-index: 10;
+  font-size: 1.2rem; color: rgba(255,255,255,0.5); z-index: 10;
 }}
-.funnel-step:first-child {{ border-radius: 8px 0 0 8px; }}
-.funnel-step:last-child {{ border-radius: 0 8px 8px 0; }}
 
-/* ── Score bars ── */
-.score-bar-container {{ margin: 2px 0; }}
-.score-bar-label {{ font-size: 0.7rem; color: #6b7a8d; display: inline-block; width: 80px; }}
-.score-bar-outer {{ display: inline-block; width: 80px; height: 8px; background: #e8eef4; border-radius: 4px; vertical-align: middle; }}
-.score-bar-inner {{ height: 8px; border-radius: 4px; }}
-.score-bar-val {{ font-size: 0.72rem; font-weight: 700; margin-left: 4px; display: inline-block; }}
+/* ── Score bars — single teal, no gradient ── */
+.score-bar-container {{ margin: 3px 0; }}
+.score-bar-label {{ font-size: 0.7rem; color: #64748b; display: inline-block; width: 85px; font-weight: 500; }}
+.score-bar-outer {{ display: inline-block; width: 80px; height: 8px; background: #e2e8f0; border-radius: 4px; vertical-align: middle; }}
+.score-bar-inner {{ height: 8px; border-radius: 4px; background: {MEDPORT_TEAL}; }}
+.score-bar-val {{ font-size: 0.72rem; font-weight: 700; margin-left: 5px; display: inline-block; color: {MEDPORT_DARK}; }}
 
 /* ── Goal progress bars ── */
 .goal-card {{
-  background: #fff;
-  border: 1px solid #e0e7ef;
-  border-radius: 10px;
-  padding: 0.85rem 1rem;
-  margin-bottom: 0.6rem;
-  box-shadow: 0 1px 4px rgba(27,79,114,0.06);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 0.7rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }}
-.goal-title {{ font-size: 0.95rem; font-weight: 700; color: {MEDPORT_BLUE}; }}
-.goal-meta {{ font-size: 0.74rem; color: #6b7a8d; margin-top: 2px; }}
+.goal-title {{ font-size: 0.95rem; font-weight: 700; color: {MEDPORT_DARK}; font-family: 'Syne', sans-serif; }}
+.goal-meta {{ font-size: 0.73rem; color: #64748b; margin-top: 3px; }}
 .goal-progress-outer {{
-  width: 100%; height: 10px; background: #e8eef4; border-radius: 5px;
-  margin: 0.5rem 0 0.3rem 0; overflow: hidden;
+  width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px;
+  margin: 0.55rem 0 0.35rem 0; overflow: hidden;
 }}
-.goal-progress-inner {{ height: 10px; border-radius: 5px; transition: width 0.4s ease; }}
-.goal-pct {{ font-size: 0.78rem; font-weight: 700; color: {MEDPORT_BLUE}; }}
+.goal-progress-inner {{
+  height: 8px; border-radius: 4px;
+  background: {MEDPORT_TEAL};
+  transition: width 0.5s ease;
+}}
+.goal-pct {{ font-size: 0.78rem; font-weight: 700; color: {MEDPORT_TEAL}; }}
 
 /* ── Activity feed ── */
 .activity-item {{
-  display: flex; align-items: flex-start; gap: 0.6rem;
-  padding: 0.55rem 0.75rem; border-radius: 8px;
-  background: #fff; border: 1px solid #f0f4f8;
+  display: flex; align-items: flex-start; gap: 0.65rem;
+  padding: 0.6rem 0.9rem; border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-left: 3px solid transparent;
   margin-bottom: 0.4rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  transition: border-left-color 0.15s ease;
+}}
+.activity-item:hover {{
+  border-left-color: {MEDPORT_TEAL};
 }}
 .activity-avatar {{
-  width: 32px; height: 32px; border-radius: 50%;
-  background: {MEDPORT_BLUE}; color: #fff;
-  font-size: 0.72rem; font-weight: 700;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: {MEDPORT_DARK};
+  color: #fff;
+  font-size: 0.7rem; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }}
-.activity-avatar.green {{ background: {MEDPORT_GREEN}; }}
+.activity-avatar.green {{ background: #059669; }}
 .activity-avatar.orange {{ background: {CARD_YELLOW}; }}
 .activity-avatar.red {{ background: {CARD_RED}; }}
 .activity-dot {{
   width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 4px;
 }}
-.activity-text {{ font-size: 0.82rem; color: #1a2a3a; line-height: 1.4; }}
-.activity-time {{ font-size: 0.72rem; color: #8a9ab0; margin-top: 1px; }}
+.activity-text {{ font-size: 0.82rem; color: #1e293b; line-height: 1.4; }}
+.activity-time {{ font-size: 0.72rem; color: #94a3b8; margin-top: 2px; }}
 
 /* ── Task cards ── */
 .task-card {{
-  background: #fff;
-  border: 1px solid #e0e7ef;
-  border-left: 4px solid {MEDPORT_BLUE};
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-left: 3px solid {MEDPORT_TEAL};
   border-radius: 8px;
-  padding: 0.7rem 0.9rem;
+  padding: 0.75rem 1rem;
   margin-bottom: 0.5rem;
-  box-shadow: 0 1px 4px rgba(27,79,114,0.05);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  transition: box-shadow 0.2s;
 }}
-.task-title {{ font-size: 0.88rem; font-weight: 700; color: #1a2a3a; }}
-.task-meta {{ font-size: 0.73rem; color: #6b7a8d; margin-top: 3px; }}
-.task-overdue {{ color: #e74c3c; font-weight: 700; }}
-.task-due-soon {{ color: #f39c12; font-weight: 600; }}
+.task-card:hover {{
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}}
+.task-title {{ font-size: 0.9rem; font-weight: 700; color: {MEDPORT_DARK}; }}
+.task-meta {{ font-size: 0.73rem; color: #64748b; margin-top: 4px; }}
+.task-overdue {{ color: {CARD_RED}; font-weight: 700; }}
+.task-due-soon {{ color: {CARD_YELLOW}; font-weight: 600; }}
 
-/* ── Priority badges ── */
-.badge-priority-low {{ background: #f0f4f8; color: #6c757d; padding: 2px 9px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }}
-.badge-priority-medium {{ background: #eaf4fb; color: #2980b9; padding: 2px 9px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }}
-.badge-priority-high {{ background: #fff3cd; color: #856404; padding: 2px 9px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }}
-.badge-priority-urgent {{ background: #f8d7da; color: #721c24; padding: 2px 9px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }}
+/* ── Priority badges — pill, muted bg, colored text ── */
+.badge-priority-low {{ background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 999px; font-size: 0.71rem; font-weight: 600; }}
+.badge-priority-medium {{ background: #eff6ff; color: {MEDPORT_BLUE}; padding: 2px 8px; border-radius: 999px; font-size: 0.71rem; font-weight: 600; }}
+.badge-priority-high {{ background: #fffbeb; color: #92400e; padding: 2px 8px; border-radius: 999px; font-size: 0.71rem; font-weight: 600; }}
+.badge-priority-urgent {{ background: #fef2f2; color: #991b1b; padding: 2px 8px; border-radius: 999px; font-size: 0.71rem; font-weight: 700; }}
 
 /* ── Task status badges ── */
-.badge-status-open {{ background: #eaf4fb; color: #2980b9; padding: 2px 9px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }}
-.badge-status-in_progress {{ background: #f3e9fd; color: #8e44ad; padding: 2px 9px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }}
-.badge-status-completed {{ background: #d4edda; color: #155724; padding: 2px 9px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }}
-.badge-status-blocked {{ background: #f8d7da; color: #721c24; padding: 2px 9px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }}
+.badge-status-open {{ background: #eff6ff; color: {MEDPORT_BLUE}; padding: 2px 8px; border-radius: 999px; font-size: 0.71rem; font-weight: 600; }}
+.badge-status-in_progress {{ background: #f5f3ff; color: #6d28d9; padding: 2px 8px; border-radius: 999px; font-size: 0.71rem; font-weight: 600; }}
+.badge-status-completed {{ background: #f0fdf9; color: #065f46; padding: 2px 8px; border-radius: 999px; font-size: 0.71rem; font-weight: 600; }}
+.badge-status-blocked {{ background: #fef2f2; color: #991b1b; padding: 2px 8px; border-radius: 999px; font-size: 0.71rem; font-weight: 600; }}
 
 /* ── Card badges (disciplinary) ── */
-.card-grey {{ background: #e0e0e0; color: #424242; padding: 3px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; }}
-.card-yellow {{ background: #fff3cd; color: #856404; padding: 3px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; border: 1px solid #f39c12; }}
-.card-red {{ background: #f8d7da; color: #721c24; padding: 3px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; border: 1px solid #e74c3c; }}
+.card-grey {{ background: #f1f5f9; color: #475569; padding: 2px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }}
+.card-yellow {{ background: #fffbeb; color: #92400e; padding: 2px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; border: 1px solid {CARD_YELLOW}; }}
+.card-red {{ background: #fef2f2; color: #991b1b; padding: 2px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; border: 1px solid {CARD_RED}; }}
 
 /* ── Standing status badges ── */
-.standing-good {{ background: #d4edda; color: #155724; padding: 3px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }}
-.standing-grey {{ background: #e0e0e0; color: #424242; padding: 3px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }}
-.standing-yellow {{ background: #fff3cd; color: #856404; padding: 3px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }}
-.standing-review {{ background: #f8d7da; color: #721c24; padding: 3px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }}
-.standing-removed {{ background: #721c24; color: #fff; padding: 3px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }}
+.standing-good {{ background: #f0fdf9; color: #065f46; padding: 2px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; }}
+.standing-grey {{ background: #f1f5f9; color: #475569; padding: 2px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; }}
+.standing-yellow {{ background: #fffbeb; color: #92400e; padding: 2px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; }}
+.standing-review {{ background: #fef2f2; color: #991b1b; padding: 2px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; }}
+.standing-removed {{ background: #991b1b; color: #fff; padding: 2px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; }}
 
-/* ── Member card (team overview) ── */
+/* ── Member card — minimal row layout ── */
 .member-card {{
-  background: #fff;
-  border: 1px solid #e0e7ef;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 0.9rem 1rem;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(27,79,114,0.06);
+  padding: 0.85rem 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: box-shadow 0.2s ease;
+}}
+.member-card:hover {{
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }}
 .member-avatar {{
-  width: 44px; height: 44px; border-radius: 50%;
-  background: linear-gradient(135deg, {MEDPORT_BLUE}, {MEDPORT_GREEN});
-  color: #fff; font-size: 1rem; font-weight: 700;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: {MEDPORT_DARK};
+  color: #fff; font-size: 0.85rem; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 0.4rem auto;
+  flex-shrink: 0;
 }}
-.member-name {{ font-size: 0.9rem; font-weight: 700; color: {MEDPORT_BLUE}; }}
-.member-stat {{ font-size: 0.74rem; color: #6b7a8d; }}
+.member-name {{ font-size: 0.9rem; font-weight: 700; color: {MEDPORT_DARK}; font-family: 'Syne', sans-serif; }}
+.member-role {{ font-size: 0.73rem; color: #64748b; font-weight: 500; margin-top: 1px; }}
+.member-stat {{ font-size: 0.72rem; color: #94a3b8; margin-top: 2px; }}
 
-/* ── Prospect card helpers (from original) ── */
+/* ── Primary buttons — gradient accent ── */
+.stButton > button[kind="primary"] {{
+  background: linear-gradient(135deg, {MEDPORT_TEAL}, {MEDPORT_BLUE});
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.45rem 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: box-shadow 0.2s ease, opacity 0.2s ease;
+}}
+.stButton > button[kind="primary"]:hover {{
+  box-shadow: 0 4px 16px rgba(0,184,159,0.35);
+  opacity: 0.92;
+}}
+
+/* ── Prospect card helpers ── */
 .queue-badge {{
-  background: #fff3cd; color: #856404;
-  border: 1px solid #ffc107;
-  padding: 3px 10px; border-radius: 20px;
-  font-size: 0.8rem; font-weight: 700; display: inline-block;
+  background: #fffbeb; color: #92400e;
+  border: 1px solid {CARD_YELLOW};
+  padding: 2px 8px; border-radius: 6px;
+  font-size: 0.75rem; font-weight: 600; display: inline-block;
 }}
-.inst-header {{ font-size: 1.05rem; font-weight: 700; color: #1a2a3a; }}
-.inst-meta {{ font-size: 0.8rem; color: #5a6a7a; margin-top: 0.15rem; }}
-.score-green  {{ background:#d4edda; color:#155724; padding:2px 8px; border-radius:20px; font-weight:700; font-size:0.82rem; }}
-.score-yellow {{ background:#fff3cd; color:#856404; padding:2px 8px; border-radius:20px; font-weight:700; font-size:0.82rem; }}
-.score-red    {{ background:#f8d7da; color:#721c24; padding:2px 8px; border-radius:20px; font-weight:700; font-size:0.82rem; }}
-.risk-none   {{ background:#d4edda; color:#155724; padding:2px 8px; border-radius:20px; font-size:0.75rem; font-weight:600; }}
-.risk-low    {{ background:#d1ecf1; color:#0c5460; padding:2px 8px; border-radius:20px; font-size:0.75rem; font-weight:600; }}
-.risk-medium {{ background:#fff3cd; color:#856404; padding:2px 8px; border-radius:20px; font-size:0.75rem; font-weight:600; }}
-.risk-high   {{ background:#f8d7da; color:#721c24; padding:2px 8px; border-radius:20px; font-size:0.75rem; font-weight:600; }}
+.inst-header {{ font-size: 1.05rem; font-weight: 700; color: {MEDPORT_DARK}; font-family: 'Syne', sans-serif; }}
+.inst-meta {{ font-size: 0.8rem; color: #64748b; margin-top: 0.15rem; }}
+.score-green  {{ background:#f0fdf9; color:#065f46; padding:2px 8px; border-radius:6px; font-weight:600; font-size:0.78rem; }}
+.score-yellow {{ background:#fffbeb; color:#92400e; padding:2px 8px; border-radius:6px; font-weight:600; font-size:0.78rem; }}
+.score-red    {{ background:#fef2f2; color:#991b1b; padding:2px 8px; border-radius:6px; font-weight:600; font-size:0.78rem; }}
+.risk-none   {{ background:#f0fdf9; color:#065f46; padding:2px 7px; border-radius:6px; font-size:0.72rem; font-weight:600; }}
+.risk-low    {{ background:#eff6ff; color:#1e40af; padding:2px 7px; border-radius:6px; font-size:0.72rem; font-weight:600; }}
+.risk-medium {{ background:#fffbeb; color:#92400e; padding:2px 7px; border-radius:6px; font-size:0.72rem; font-weight:600; }}
+.risk-high   {{ background:#fef2f2; color:#991b1b; padding:2px 7px; border-radius:6px; font-size:0.72rem; font-weight:600; }}
 .type-badge {{
-  background: {MEDPORT_BLUE}18; color: {MEDPORT_BLUE};
-  padding: 2px 8px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+  background: rgba(0,184,159,0.1); color: {MEDPORT_TEAL};
+  padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
 }}
-.tier-a {{ background:#1B4F72; color:#fff; padding:2px 9px; border-radius:20px; font-size:0.78rem; font-weight:700; }}
-.tier-b {{ background:#2980b9; color:#fff; padding:2px 9px; border-radius:20px; font-size:0.78rem; font-weight:700; }}
-.tier-c {{ background:#aab4bf; color:#fff; padding:2px 9px; border-radius:20px; font-size:0.78rem; font-weight:700; }}
-.status-badge {{ display:inline-block; padding:2px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; color:#fff; }}
+.tier-a {{ background: linear-gradient(135deg,{MEDPORT_TEAL},{MEDPORT_BLUE}); color:#fff; padding:2px 9px; border-radius:6px; font-size:0.75rem; font-weight:700; }}
+.tier-b {{ background: {MEDPORT_BLUE}; color:#fff; padding:2px 9px; border-radius:6px; font-size:0.75rem; font-weight:700; }}
+.tier-c {{ background: #94a3b8; color:#fff; padding:2px 9px; border-radius:6px; font-size:0.75rem; font-weight:700; }}
+.status-badge {{ display:inline-block; padding:2px 8px; border-radius:6px; font-size:0.72rem; font-weight:600; color:#fff; }}
 .outreach-box {{
-  background: #eaf4fb; border-left: 3px solid #2980b9;
-  border-radius: 6px; padding: 0.6rem 0.9rem;
-  font-size: 0.88rem; color: #1a3a52; margin-top: 0.4rem;
+  background: #f8fafc; border-left: 3px solid {MEDPORT_TEAL};
+  border-radius: 6px; padding: 0.65rem 0.9rem;
+  font-size: 0.88rem; color: {MEDPORT_DARK}; margin-top: 0.4rem;
+  border: 1px solid #e2e8f0; border-left: 3px solid {MEDPORT_TEAL};
 }}
 .info-pill {{
-  background: #f0f4f8; color: #3a4a5a;
-  border-radius: 6px; padding: 4px 10px; font-size: 0.78rem;
-  display: inline-block; margin: 2px 4px 2px 0;
+  background: #f8fafc; color: #475569;
+  border-radius: 6px; padding: 3px 9px; font-size: 0.76rem;
+  display: inline-block; margin: 2px 3px 2px 0;
+  border: 1px solid #e2e8f0;
 }}
-.info-pill b {{ color: {MEDPORT_BLUE}; }}
+.info-pill b {{ color: {MEDPORT_TEAL}; }}
 .alert-box {{
-  background: #fff9e6; border-left: 4px solid #f39c12;
-  border-radius: 8px; padding: 0.8rem 1rem;
-  font-size: 0.88rem; color: #5d4037;
+  background: #fffbeb; border-left: 3px solid {CARD_YELLOW};
+  border-radius: 8px; padding: 0.75rem 1rem;
+  font-size: 0.86rem; color: #78350f;
 }}
-hr.subtle {{ border: none; border-top: 1px solid #e8eef4; margin: 0.5rem 0; }}
+hr.subtle {{ border: none; border-top: 1px solid #e2e8f0; margin: 0.5rem 0; }}
 
-/* ── Chat UI ── */
+/* ── Chat UI — clean bubbles ── */
 .chat-msg-user {{
-  background: {MEDPORT_LIGHT_BLUE}; border-radius: 12px 12px 4px 12px;
-  padding: 0.65rem 0.9rem; margin: 0.3rem 0; font-size: 0.88rem;
-  max-width: 85%; margin-left: auto;
+  background: {MEDPORT_TEAL}; color: #fff;
+  border-radius: 14px 14px 4px 14px;
+  padding: 0.65rem 1rem; margin: 0.3rem 0; font-size: 0.88rem;
+  max-width: 82%; margin-left: auto;
 }}
 .chat-msg-assistant {{
-  background: {MEDPORT_LIGHT_GREEN}; border-radius: 12px 12px 12px 4px;
-  padding: 0.65rem 0.9rem; margin: 0.3rem 0; font-size: 0.88rem;
-  max-width: 90%;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px 14px 14px 4px;
+  padding: 0.65rem 1rem; margin: 0.3rem 0; font-size: 0.88rem;
+  max-width: 88%; color: {MEDPORT_DARK};
+}}
+
+/* ── Prospect table ── */
+.mp-table {{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  color: {MEDPORT_DARK};
+}}
+.mp-table th {{
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+}}
+.mp-table td {{
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}}
+.mp-table tr:hover td {{
+  background: #f8fafc;
 }}
 
 /* ── Saved search pill ── */
 .saved-search-pill {{
-  background: {MEDPORT_LIGHT_BLUE}; color: {MEDPORT_BLUE};
-  border: 1px solid #b8d4e8; border-radius: 20px;
-  padding: 3px 12px; font-size: 0.78rem; font-weight: 600;
+  background: #f8fafc; color: #475569;
+  border: 1px solid #e2e8f0; border-radius: 6px;
+  padding: 3px 10px; font-size: 0.76rem; font-weight: 600;
   display: inline-block; cursor: pointer; margin: 2px;
+}}
+
+/* ── Intelligence page ── */
+.intel-card {{
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}}
+.intel-card-header {{
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: {MEDPORT_DARK};
+  font-family: 'Syne', sans-serif;
+}}
+.intel-card-sub {{
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-top: 2px;
+}}
+.threat-high {{ background: #fef2f2; color: #991b1b; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; }}
+.threat-medium {{ background: #fffbeb; color: #92400e; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; }}
+.threat-low {{ background: #f0fdf9; color: #065f46; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; }}
+
+/* ── Settings member card ── */
+.settings-member-card {{
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: box-shadow 0.2s;
+}}
+.settings-member-card:hover {{
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}}
+
+/* ── Filter status bar ── */
+.filter-bar {{
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.8rem;
+  color: #475569;
+  margin-bottom: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}}
+.filter-tag {{
+  background: rgba(0,184,159,0.08);
+  color: {MEDPORT_TEAL};
+  border: 1px solid rgba(0,184,159,0.2);
+  border-radius: 999px;
+  padding: 1px 9px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  display: inline-block;
 }}
 </style>
 """

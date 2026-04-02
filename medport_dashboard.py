@@ -15,7 +15,8 @@ import streamlit as st
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from lib.styles import (
-    inject_css, MEDPORT_BLUE, MEDPORT_GREEN, MEDPORT_LIGHT_BLUE, MEDPORT_LIGHT_GREEN
+    inject_css, MEDPORT_BLUE, MEDPORT_GREEN, MEDPORT_TEAL,
+    MEDPORT_LIGHT_BLUE, MEDPORT_LIGHT_GREEN, MEDPORT_LIGHT_TEAL
 )
 from lib.auth import check_auth, is_admin
 from lib.db import load_prospects, get_activity_feed, get_tasks, get_goals
@@ -117,19 +118,19 @@ with st.sidebar:
     st.markdown(
         f"""
         <div style="padding:0.5rem 0 0.2rem 0;">
-          <span style="font-size:1.3rem;font-weight:900;color:{MEDPORT_BLUE};">MedPort</span>
-          <span style="font-size:0.75rem;color:{MEDPORT_GREEN};display:block;">Team Intelligence Hub</span>
+          <span style="font-size:1.3rem;font-weight:900;color:{MEDPORT_TEAL};">MedPort</span>
+          <span style="font-size:0.75rem;color:#94a3b8;display:block;">Team Intelligence Hub</span>
         </div>
         """,
         unsafe_allow_html=True,
     )
     st.markdown(
-        f"<div style='font-size:0.8rem;color:#6b7a8d;'>Signed in as <b>{name}</b></div>",
+        f"<div style='font-size:0.8rem;color:#94a3b8;'>Signed in as <b>{name}</b></div>",
         unsafe_allow_html=True,
     )
     if admin:
         st.markdown(
-            f"<span style='background:{MEDPORT_BLUE};color:#fff;border-radius:20px;padding:1px 8px;font-size:0.7rem;font-weight:700;'>Admin</span>",
+            f"<span style='background:linear-gradient(135deg,{MEDPORT_TEAL},{MEDPORT_BLUE});color:#fff;border-radius:999px;padding:1px 10px;font-size:0.7rem;font-weight:700;'>Admin</span>",
             unsafe_allow_html=True,
         )
 
@@ -153,6 +154,8 @@ with st.sidebar:
     st.page_link("pages/3_Tasks.py", label="Tasks", icon="✅")
     st.page_link("pages/4_Cards.py", label="Cards", icon="🟨")
     st.page_link("pages/5_AI_Research.py", label="AI Research", icon="🤖")
+    st.page_link("pages/7_Intelligence.py", label="Intelligence", icon="🔍")
+    st.page_link("pages/6_Settings.py", label="Settings", icon="⚙️")
 
 # ─── Auto-refresh ────────────────────────────────────────────────────────────
 if auto_refresh:
@@ -166,13 +169,13 @@ if auto_refresh:
 st.markdown(
     f"""
     <div style="display:flex;align-items:baseline;gap:0.6rem;margin-bottom:0.3rem;">
-      <span style="font-size:2.2rem;font-weight:900;
-        background:linear-gradient(135deg,{MEDPORT_BLUE},{MEDPORT_GREEN});
+      <span style="font-size:2.4rem;font-weight:900;
+        background:linear-gradient(135deg,{MEDPORT_TEAL},{MEDPORT_BLUE});
         -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-        background-clip:text;">MedPort</span>
-      <span style="font-size:1rem;color:#6b7a8d;font-weight:500;">Team Intelligence Hub</span>
+        background-clip:text;font-family:'Syne',sans-serif;">MedPort</span>
+      <span style="font-size:1rem;color:#64748b;font-weight:500;">Team Intelligence Hub</span>
     </div>
-    <div style="font-size:1.1rem;color:#1a2a3a;margin-bottom:1.2rem;">
+    <div style="font-size:1.1rem;color:#1e293b;margin-bottom:1.4rem;font-weight:500;">
       Welcome back, <b>{name}</b>
     </div>
     """,
@@ -233,6 +236,7 @@ with right:
         st.page_link("pages/4_Cards.py", label="Cards", icon="🟨", use_container_width=True)
 
     st.page_link("pages/5_AI_Research.py", label="AI Research Assistant", icon="🤖", use_container_width=True)
+    st.page_link("pages/7_Intelligence.py", label="Intelligence Engine", icon="🔍", use_container_width=True)
 
     if not df.empty:
         st.markdown("<br>", unsafe_allow_html=True)
