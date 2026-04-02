@@ -10,6 +10,8 @@ import time
 import io
 from datetime import datetime, timezone
 
+from datetime import date as _date
+
 import pandas as pd
 import streamlit as st
 
@@ -139,9 +141,26 @@ def render_institution_card(row: pd.Series, queue_mode: bool = False, key_prefix
     status_label = STATUS_LABELS.get(current_status, current_status)
     composite = inno + access + fit + startup_rx
 
-    expander_label = f"{name_p}  —  {city}, {country}  [{status_label}]"
+    has_research = bool(row.get("research_brief", ""))
+    has_dm_research = bool(row.get("dm_research", ""))
+    has_email_draft = bool((row.get("email_drafts") or []))
+    next_followup = row.get("next_followup_at", "")
+    followup_due = False
+    if next_followup:
+        try:
+            followup_due = _date.fromisoformat(str(next_followup)) <= _date.today()
+        except Exception:
+            pass
+
+    research_icon = "🔬" if has_research else ""
+    dm_icon = "👤" if has_dm_research else ""
+    email_icon = "✉️" if has_email_draft else ""
+    followup_icon = "⏰" if followup_due else ""
+    icons = " ".join(i for i in [research_icon, dm_icon, email_icon, followup_icon] if i)
+
+    expander_label = f"{name_p}  —  {city}, {country}  [{status_label}]  {icons}".strip()
     if queue_mode:
-        expander_label = f"📧 {name_p}  —  {city}, {country}"
+        expander_label = f"📧 {name_p}  —  {city}, {country}  {icons}".strip()
 
     with st.expander(expander_label, expanded=queue_mode):
         st.markdown(f'<div style="border-left:4px solid {border_color};padding-left:0.7rem;">', unsafe_allow_html=True)
@@ -158,6 +177,30 @@ def render_institution_card(row: pd.Series, queue_mode: bool = False, key_prefix
                 f'<div style="text-align:right;margin-top:4px;">{tier_badge(rank)}<br>'
                 f'<span style="font-size:0.72rem;color:#6b7a8d;">{composite}/40</span></div>',
                 unsafe_allow_html=True,
+            )
+
+        # Research status badges + profile link
+        badge_parts = []
+        if has_research:
+            badge_parts.append('<span style="background:#f0fdf9;color:#059669;border:1px solid #bbf7d0;border-radius:6px;padding:2px 8px;font-size:0.72rem;font-weight:600;">🔬 Researched</span>')
+        else:
+            badge_parts.append('<span style="background:#f8fafc;color:#94a3b8;border:1px solid #e2e8f0;border-radius:6px;padding:2px 8px;font-size:0.72rem;font-weight:600;">Research needed</span>')
+        if has_dm_research:
+            badge_parts.append('<span style="background:#eff6ff;color:#2563EB;border:1px solid #bfdbfe;border-radius:6px;padding:2px 8px;font-size:0.72rem;font-weight:600;">👤 DM profiled</span>')
+        if has_email_draft:
+            badge_parts.append('<span style="background:#faf5ff;color:#7C3AED;border:1px solid #e9d5ff;border-radius:6px;padding:2px 8px;font-size:0.72rem;font-weight:600;">✉️ Draft ready</span>')
+        if followup_due:
+            badge_parts.append('<span style="background:#fef2f2;color:#DC2626;border:1px solid #fecaca;border-radius:6px;padding:2px 8px;font-size:0.72rem;font-weight:700;">⏰ Follow-up due</span>')
+
+        badge_row_col, profile_btn_col = st.columns([6, 1])
+        with badge_row_col:
+            if badge_parts:
+                st.markdown(" &nbsp;".join(badge_parts), unsafe_allow_html=True)
+        with profile_btn_col:
+            st.page_link(
+                f"pages/16_Prospect_Profile.py?id={prospect_id}",
+                label="Full Profile →",
+                use_container_width=True,
             )
 
         st.markdown('<hr class="subtle">', unsafe_allow_html=True)
@@ -331,6 +374,8 @@ with st.sidebar:
     )
     selected_assignee = st.selectbox("Assigned to", ["All"] + _dynamic_member_names, key="crm_assignee")
     min_score = st.slider("Min Score (out of 40)", 0, 40, 0, 1, key="crm_min_score")
+    needs_research = st.toggle("Needs research only", value=False, key="crm_needs_research")
+    followup_due_filter = st.toggle("Follow-up due", value=False, key="crm_followup_due")
 
     st.markdown("---")
     st.markdown("### Saved Searches")
@@ -413,6 +458,12 @@ if selected_assignee != "All":
         filtered = filtered[filtered["assigned_to"] == selected_assignee]
 if min_score > 0:
     filtered = filtered[filtered["composite_score"] >= min_score]
+if needs_research and "research_brief" in filtered.columns:
+    filtered = filtered[filtered["research_brief"].fillna("") == ""]
+if followup_due_filter and "next_followup_at" in filtered.columns:
+    today_str = _date.today().isoformat()
+    filtered = filtered[filtered["next_followup_at"].fillna("").astype(str) <= today_str]
+    filtered = filtered[filtered["next_followup_at"].fillna("").astype(str) != ""]
 
 # ─── Header ──────────────────────────────────────────────────────────────────
 

@@ -32,6 +32,7 @@ _ALL_PAGES: list[tuple[str, str, str]] = [
     ("pages/12_Announcements.py",  "Announcements",    "📢"),
     ("pages/13_Standups.py",       "Standups",         "📋"),
     ("pages/14_Wiki.py",           "Wiki",             "📚"),
+    ("pages/16_Prospect_Profile.py", "Prospect Profile", "🎯"),
 ]
 
 # Lookup by label for quick access in badge/filter logic

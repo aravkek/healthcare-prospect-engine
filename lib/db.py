@@ -1132,3 +1132,104 @@ def get_my_sprint_tasks(sprint_id: str, email: str) -> list[dict]:
     """Returns sprint tasks assigned to a specific email."""
     tasks = get_sprint_tasks(sprint_id)
     return [t for t in tasks if email.lower() in [a.lower() for a in (t.get("assigned_to") or [])]]
+
+
+# ─── Prospect enrichment ──────────────────────────────────────────────────────
+
+def save_prospect_research(
+    prospect_id: str,
+    research_brief: str | None = None,
+    dm_research: str | None = None,
+    fit_analysis: str | None = None,
+) -> bool:
+    """Save AI-generated research fields to a prospect. Only updates non-None fields."""
+    client = get_client()
+    if client is None:
+        return False
+    updates: dict = {"research_updated_at": datetime.now(timezone.utc).isoformat()}
+    if research_brief is not None:
+        updates["research_brief"] = research_brief
+    if dm_research is not None:
+        updates["dm_research"] = dm_research
+    if fit_analysis is not None:
+        updates["fit_analysis"] = fit_analysis
+    try:
+        client.table("prospects").update(updates).eq("id", prospect_id).execute()
+        load_prospects.clear()
+        return True
+    except Exception as e:
+        st.error(f"Failed to save research: {e}")
+        return False
+
+
+def add_email_draft(prospect_id: str, subject: str, body: str, variant: int = 1) -> bool:
+    """Append an email draft to a prospect's email_drafts JSONB array."""
+    client = get_client()
+    if client is None:
+        return False
+    try:
+        # Fetch existing drafts
+        result = client.table("prospects").select("email_drafts").eq("id", prospect_id).execute()
+        existing = (result.data or [{}])[0].get("email_drafts") or []
+        new_draft = {
+            "id": str(datetime.now(timezone.utc).timestamp()),
+            "subject": subject,
+            "body": body,
+            "variant": variant,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        existing.append(new_draft)
+        client.table("prospects").update({"email_drafts": existing}).eq("id", prospect_id).execute()
+        load_prospects.clear()
+        return True
+    except Exception as e:
+        st.error(f"Failed to save email draft: {e}")
+        return False
+
+
+def log_outreach_event(
+    prospect_id: str,
+    event_type: str,
+    subject: str = "",
+    notes: str = "",
+    outcome: str = "",
+    logged_by: str = "",
+) -> bool:
+    """Append an outreach event to a prospect's outreach_timeline JSONB array."""
+    client = get_client()
+    if client is None:
+        return False
+    try:
+        result = client.table("prospects").select("outreach_timeline").eq("id", prospect_id).execute()
+        existing = (result.data or [{}])[0].get("outreach_timeline") or []
+        event = {
+            "date": datetime.now(timezone.utc).isoformat(),
+            "type": event_type,
+            "subject": subject,
+            "notes": notes,
+            "outcome": outcome,
+            "logged_by": logged_by,
+        }
+        existing.append(event)
+        updates = {
+            "outreach_timeline": existing,
+            "last_contacted_at": datetime.now(timezone.utc).isoformat(),
+        }
+        client.table("prospects").update(updates).eq("id", prospect_id).execute()
+        load_prospects.clear()
+        return True
+    except Exception as e:
+        st.error(f"Failed to log outreach event: {e}")
+        return False
+
+
+def get_prospect_by_id(prospect_id: str) -> dict:
+    """Fetch a single prospect by ID, all fields."""
+    client = get_client()
+    if client is None:
+        return {}
+    try:
+        result = client.table("prospects").select("*").eq("id", str(prospect_id)).limit(1).execute()
+        return result.data[0] if result.data else {}
+    except Exception:
+        return {}
