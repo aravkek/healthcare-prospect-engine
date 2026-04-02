@@ -622,3 +622,383 @@ def delete_team_member(member_id: str) -> bool:
     except Exception as e:
         st.error(f"Failed to remove team member: {e}")
         return False
+
+
+def get_member_by_email(email: str) -> dict:
+    """Returns team_members row for email, or {} if not found."""
+    client = get_client()
+    if client is None:
+        return {}
+    try:
+        result = (
+            client.table("team_members")
+            .select("*")
+            .eq("email", (email or "").lower().strip())
+            .eq("is_active", True)
+            .limit(1)
+            .execute()
+        )
+        if result.data:
+            return result.data[0]
+        return {}
+    except Exception:
+        return {}
+
+
+@st.cache_data(ttl=20)
+def get_tasks_by_department(department: str) -> list[dict]:
+    """Returns tasks filtered by department."""
+    client = get_client()
+    if client is None:
+        return []
+    try:
+        result = (
+            client.table("tasks")
+            .select("*")
+            .eq("department", department)
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return result.data or []
+    except Exception:
+        return []
+
+
+# ─── Announcements ────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=15)
+def get_announcements(active_only: bool = True) -> list[dict]:
+    """Returns announcements, newest first."""
+    client = get_client()
+    if client is None:
+        return []
+    try:
+        query = client.table("announcements").select("*").order("created_at", desc=True)
+        if active_only:
+            query = query.eq("is_active", True)
+        result = query.execute()
+        return result.data or []
+    except Exception:
+        return []
+
+
+def create_announcement(ann_dict: dict) -> str | None:
+    client = get_client()
+    if client is None:
+        return None
+    try:
+        result = client.table("announcements").insert(ann_dict).execute()
+        if result.data:
+            get_announcements.clear()
+            return result.data[0].get("id")
+        return None
+    except Exception as e:
+        st.error(f"Failed to create announcement: {e}")
+        return None
+
+
+def update_announcement(ann_id: str, updates: dict) -> bool:
+    client = get_client()
+    if client is None:
+        return False
+    try:
+        client.table("announcements").update(updates).eq("id", ann_id).execute()
+        get_announcements.clear()
+        return True
+    except Exception as e:
+        st.error(f"Failed to update announcement: {e}")
+        return False
+
+
+def get_unread_announcement_count(email: str) -> int:
+    """Returns count of active announcements not yet read by this email."""
+    client = get_client()
+    if client is None:
+        return 0
+    try:
+        all_active = get_announcements(active_only=True)
+        if not all_active:
+            return 0
+        ann_ids = [a["id"] for a in all_active]
+        read_result = (
+            client.table("announcement_reads")
+            .select("announcement_id")
+            .eq("email", email.lower())
+            .execute()
+        )
+        read_ids = {r["announcement_id"] for r in (read_result.data or [])}
+        return sum(1 for aid in ann_ids if aid not in read_ids)
+    except Exception:
+        return 0
+
+
+def mark_announcement_read(ann_id: str, email: str) -> bool:
+    client = get_client()
+    if client is None:
+        return False
+    try:
+        client.table("announcement_reads").upsert({
+            "announcement_id": ann_id,
+            "email": email.lower(),
+        }).execute()
+        return True
+    except Exception:
+        return False
+
+
+# ─── Standups ─────────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=20)
+def get_standups(limit: int = 50, author_email: str | None = None) -> list[dict]:
+    """Returns standup logs, newest first. Optionally filtered by author."""
+    client = get_client()
+    if client is None:
+        return []
+    try:
+        query = (
+            client.table("standup_logs")
+            .select("*")
+            .order("submitted_at", desc=True)
+            .limit(limit)
+        )
+        result = query.execute()
+        logs = result.data or []
+        if author_email:
+            logs = [s for s in logs if s.get("author_email") == author_email.lower()]
+        return logs
+    except Exception:
+        return []
+
+
+def submit_standup(standup_dict: dict) -> str | None:
+    client = get_client()
+    if client is None:
+        return None
+    try:
+        result = client.table("standup_logs").insert(standup_dict).execute()
+        if result.data:
+            get_standups.clear()
+            return result.data[0].get("id")
+        return None
+    except Exception as e:
+        st.error(f"Failed to submit standup: {e}")
+        return None
+
+
+def get_today_standup(author_email: str) -> dict | None:
+    """Returns today's standup for this author, or None."""
+    from datetime import date
+    client = get_client()
+    if client is None:
+        return None
+    try:
+        today = date.today().isoformat()
+        result = (
+            client.table("standup_logs")
+            .select("*")
+            .eq("author_email", author_email.lower())
+            .eq("date", today)
+            .limit(1)
+            .execute()
+        )
+        return result.data[0] if result.data else None
+    except Exception:
+        return None
+
+
+# ─── Wiki ─────────────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=30)
+def get_wiki_pages(category: str | None = None) -> list[dict]:
+    """Returns wiki pages, newest first. Optionally filtered by category."""
+    client = get_client()
+    if client is None:
+        return []
+    try:
+        query = client.table("wiki_pages").select("*").order("updated_at", desc=True)
+        result = query.execute()
+        pages = result.data or []
+        if category:
+            pages = [p for p in pages if p.get("category") == category]
+        return pages
+    except Exception:
+        return []
+
+
+def create_wiki_page(page_dict: dict) -> str | None:
+    client = get_client()
+    if client is None:
+        return None
+    try:
+        result = client.table("wiki_pages").insert(page_dict).execute()
+        if result.data:
+            get_wiki_pages.clear()
+            return result.data[0].get("id")
+        return None
+    except Exception as e:
+        st.error(f"Failed to create wiki page: {e}")
+        return None
+
+
+def update_wiki_page(page_id: str, updates: dict) -> bool:
+    client = get_client()
+    if client is None:
+        return False
+    try:
+        updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+        client.table("wiki_pages").update(updates).eq("id", page_id).execute()
+        get_wiki_pages.clear()
+        return True
+    except Exception as e:
+        st.error(f"Failed to update wiki page: {e}")
+        return False
+
+
+# ─── Notifications ────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=10)
+def get_notifications(recipient_email: str, unread_only: bool = False) -> list[dict]:
+    """Returns notifications for a user, newest first."""
+    client = get_client()
+    if client is None:
+        return []
+    try:
+        query = (
+            client.table("notifications")
+            .select("*")
+            .eq("recipient_email", recipient_email.lower())
+            .order("created_at", desc=True)
+            .limit(50)
+        )
+        if unread_only:
+            query = query.eq("is_read", False)
+        result = query.execute()
+        return result.data or []
+    except Exception:
+        return []
+
+
+def create_notification(notif_dict: dict) -> bool:
+    """Insert a notification. Silently fails — notifications are best-effort."""
+    client = get_client()
+    if client is None:
+        return False
+    try:
+        client.table("notifications").insert(notif_dict).execute()
+        return True
+    except Exception:
+        return False
+
+
+def mark_notification_read(notif_id: str) -> bool:
+    client = get_client()
+    if client is None:
+        return False
+    try:
+        client.table("notifications").update({"is_read": True}).eq("id", notif_id).execute()
+        get_notifications.clear()
+        return True
+    except Exception:
+        return False
+
+
+def mark_all_notifications_read(recipient_email: str) -> bool:
+    client = get_client()
+    if client is None:
+        return False
+    try:
+        client.table("notifications").update({"is_read": True}).eq(
+            "recipient_email", recipient_email.lower()
+        ).eq("is_read", False).execute()
+        get_notifications.clear()
+        return True
+    except Exception:
+        return False
+
+
+def get_unread_notification_count(recipient_email: str) -> int:
+    """Returns count of unread notifications. Cached."""
+    notifs = get_notifications(recipient_email, unread_only=True)
+    return len(notifs)
+
+
+# ─── Task Comments ────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=15)
+def get_task_comments(task_id: str) -> list[dict]:
+    client = get_client()
+    if client is None:
+        return []
+    try:
+        result = (
+            client.table("task_comments")
+            .select("*")
+            .eq("task_id", task_id)
+            .order("created_at")
+            .execute()
+        )
+        return result.data or []
+    except Exception:
+        return []
+
+
+def add_task_comment(comment_dict: dict) -> str | None:
+    client = get_client()
+    if client is None:
+        return None
+    try:
+        result = client.table("task_comments").insert(comment_dict).execute()
+        if result.data:
+            get_task_comments.clear()
+            return result.data[0].get("id")
+        return None
+    except Exception as e:
+        st.error(f"Failed to add comment: {e}")
+        return None
+
+
+# ─── One-on-Ones ──────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=30)
+def get_one_on_ones(member_email: str | None = None) -> list[dict]:
+    """Returns 1-on-1 records, newest first."""
+    client = get_client()
+    if client is None:
+        return []
+    try:
+        query = client.table("one_on_ones").select("*").order("scheduled_date", desc=True)
+        result = query.execute()
+        records = result.data or []
+        if member_email:
+            records = [r for r in records if r.get("member_email") == member_email.lower()]
+        return records
+    except Exception:
+        return []
+
+
+def create_one_on_one(record_dict: dict) -> str | None:
+    client = get_client()
+    if client is None:
+        return None
+    try:
+        result = client.table("one_on_ones").insert(record_dict).execute()
+        if result.data:
+            get_one_on_ones.clear()
+            return result.data[0].get("id")
+        return None
+    except Exception as e:
+        st.error(f"Failed to create 1-on-1: {e}")
+        return None
+
+
+def update_one_on_one(record_id: str, updates: dict) -> bool:
+    client = get_client()
+    if client is None:
+        return False
+    try:
+        client.table("one_on_ones").update(updates).eq("id", record_id).execute()
+        get_one_on_ones.clear()
+        return True
+    except Exception as e:
+        st.error(f"Failed to update 1-on-1: {e}")
+        return False

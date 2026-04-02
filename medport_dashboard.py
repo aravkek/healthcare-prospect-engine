@@ -18,8 +18,9 @@ from lib.styles import (
     inject_css, MEDPORT_BLUE, MEDPORT_GREEN, MEDPORT_TEAL,
     MEDPORT_LIGHT_BLUE, MEDPORT_LIGHT_GREEN, MEDPORT_LIGHT_TEAL
 )
-from lib.auth import check_auth, is_admin, render_logout_button
-from lib.db import load_prospects, get_activity_feed, get_tasks, get_goals
+from lib.auth import check_auth, is_admin, render_logout_button, get_department
+from lib.db import load_prospects, get_activity_feed, get_tasks, get_goals, get_announcements, get_unread_announcement_count, mark_announcement_read
+from lib.nav import render_sidebar_nav
 
 # ─── Page config — must be first Streamlit call ──────────────────────────────
 st.set_page_config(
@@ -34,6 +35,7 @@ inject_css()
 # ─── Auth ────────────────────────────────────────────────────────────────────
 name, email = check_auth()
 admin = is_admin(email)
+dept = get_department(email)
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -114,41 +116,12 @@ def _activity_html(activity: dict) -> str:
 
 # ─── Sidebar ─────────────────────────────────────────────────────────────────
 
+_unread_ann = get_unread_announcement_count(email) if email else 0
+
 with st.sidebar:
-    st.markdown(
-        f"""
-        <div style="padding:0.5rem 0 0.2rem 0;">
-          <span style="font-size:1.3rem;font-weight:900;color:{MEDPORT_TEAL};">MedPort</span>
-          <span style="font-size:0.75rem;color:#94a3b8;display:block;">Team Intelligence Hub</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f"<div style='font-size:0.8rem;color:#94a3b8;'>Signed in as <b>{name}</b></div>",
-        unsafe_allow_html=True,
-    )
-    if admin:
-        st.markdown(
-            f"<span style='background:linear-gradient(135deg,{MEDPORT_TEAL},{MEDPORT_BLUE});color:#fff;border-radius:999px;padding:1px 10px;font-size:0.7rem;font-weight:700;'>Admin</span>",
-            unsafe_allow_html=True,
-        )
-
+    render_sidebar_nav(email, dept, admin, unread_announcements=_unread_ann)
     st.markdown("---")
-
-    render_logout_button()
-
     auto_refresh = st.toggle("Auto-refresh (30s)", value=False, key="home_refresh")
-
-    st.markdown("---")
-    st.markdown("### Navigate")
-    st.page_link("pages/1_Team_Hub.py", label="Team Hub", icon="🏠")
-    st.page_link("pages/2_Outreach_CRM.py", label="Outreach CRM", icon="📊")
-    st.page_link("pages/3_Tasks.py", label="Tasks", icon="✅")
-    st.page_link("pages/4_Cards.py", label="Cards", icon="🟨")
-    st.page_link("pages/5_AI_Research.py", label="AI Research", icon="🤖")
-    st.page_link("pages/7_Intelligence.py", label="Intelligence", icon="🔍")
-    st.page_link("pages/6_Settings.py", label="Settings", icon="⚙️")
 
 # ─── Auto-refresh ────────────────────────────────────────────────────────────
 if auto_refresh:
@@ -172,6 +145,36 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+# ─── Announcements banner ────────────────────────────────────────────────────
+_announcements = get_announcements(active_only=True)
+_read_ids = st.session_state.get("_ann_read_ids", set())
+_unread_anns = [a for a in _announcements if a.get("id") not in _read_ids]
+
+if _unread_anns:
+    # Sort: urgent first
+    _priority_order = {"urgent": 0, "warning": 1, "info": 2}
+    _unread_anns.sort(key=lambda a: _priority_order.get(a.get("priority", "info"), 2))
+    for _ann in _unread_anns[:3]:  # Show max 3 at a time
+        _p = _ann.get("priority", "info")
+        _colors = {"urgent": ("#fef2f2", "#ef4444"), "warning": ("#fffbeb", "#F59E0B"), "info": ("#eff6ff", "#3B82F6")}
+        _bg, _border = _colors.get(_p, _colors["info"])
+        _ann_id = _ann.get("id", "")
+        _col1, _col2 = st.columns([10, 1])
+        with _col1:
+            st.markdown(
+                f'<div style="background:{_bg};border-left:4px solid {_border};border-radius:10px;padding:0.75rem 1rem;margin-bottom:0.5rem;">'
+                f'<div style="font-size:0.9375rem;font-weight:700;color:#0F172A;">{_ann.get("title","")}</div>'
+                f'<div style="font-size:0.875rem;color:#334155;margin-top:3px;">{_ann.get("body","")}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        with _col2:
+            if st.button("✕", key=f"dismiss_ann_{_ann_id}", help="Dismiss"):
+                mark_announcement_read(_ann_id, email)
+                _read_ids.add(_ann_id)
+                st.session_state["_ann_read_ids"] = _read_ids
+                st.rerun()
 
 # ─── Quick stats ─────────────────────────────────────────────────────────────
 df = load_prospects()

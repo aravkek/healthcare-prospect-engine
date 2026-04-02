@@ -19,6 +19,25 @@ MEDPORT_LIGHT_BLUE = "#eff6ff"
 MEDPORT_GREEN = MEDPORT_TEAL
 MEDPORT_LIGHT_GREEN = MEDPORT_LIGHT_TEAL
 
+# ─── Department colors ───────────────────────────────────────────────────────
+DEPT_COLORS = {
+    "leadership": "#00B89F",   # teal
+    "marketing":  "#3B82F6",   # blue
+    "finance":    "#10B981",   # emerald
+    "tech":       "#8B5CF6",   # purple
+    "operations": "#F59E0B",   # amber
+    "unassigned": "#94a3b8",   # slate
+}
+
+DEPT_LABELS = {
+    "leadership": "Leadership",
+    "marketing":  "Marketing",
+    "finance":    "Finance",
+    "tech":       "Tech",
+    "operations": "Operations",
+    "unassigned": "Unassigned",
+}
+
 # ─── Card system colors ──────────────────────────────────────────────────────
 CARD_GREY = "#94a3b8"
 CARD_YELLOW = "#f59e0b"
@@ -504,6 +523,92 @@ hr.subtle {{ border: none; border-top: 1px solid #e2e8f0; margin: 0.5rem 0; }}
 }}
 .mp-table tr:hover td {{
   background: #f8fafc;
+}}
+
+/* ── Department badges ── */
+.dept-badge {{
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}}
+.dept-leadership {{ background: rgba(0,184,159,0.12); color: #00B89F; }}
+.dept-marketing   {{ background: rgba(59,130,246,0.12); color: #2563EB; }}
+.dept-finance     {{ background: rgba(16,185,129,0.12); color: #059669; }}
+.dept-tech        {{ background: rgba(139,92,246,0.12); color: #7C3AED; }}
+.dept-operations  {{ background: rgba(245,158,11,0.12); color: #D97706; }}
+.dept-unassigned  {{ background: #f1f5f9; color: #64748b; }}
+
+/* ── Access denied card ── */
+.access-denied-card {{
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-left: 4px solid #ef4444;
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  max-width: 540px;
+  margin: 3rem auto;
+}}
+.access-denied-title {{
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #991b1b;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  margin-bottom: 0.5rem;
+}}
+.access-denied-body {{
+  font-size: 0.9375rem;
+  color: #7f1d1d;
+  line-height: 1.6;
+}}
+
+/* ── Announcement banner ── */
+.announcement-info    {{ background:#eff6ff; border-left:4px solid #3B82F6; border-radius:10px; padding:0.875rem 1.1rem; margin-bottom:0.75rem; }}
+.announcement-warning {{ background:#fffbeb; border-left:4px solid #F59E0B; border-radius:10px; padding:0.875rem 1.1rem; margin-bottom:0.75rem; }}
+.announcement-urgent  {{ background:#fef2f2; border-left:4px solid #EF4444; border-radius:10px; padding:0.875rem 1.1rem; margin-bottom:0.75rem; }}
+.announcement-title   {{ font-size:0.9375rem; font-weight:700; color:#0F172A; font-family:'Plus Jakarta Sans',sans-serif; }}
+.announcement-body    {{ font-size:0.875rem; color:#334155; margin-top:4px; line-height:1.5; }}
+
+/* ── Standup card ── */
+.standup-card {{
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}}
+.standup-author {{ font-size:0.875rem; font-weight:700; color:#0F172A; font-family:'Plus Jakarta Sans',sans-serif; }}
+.standup-date   {{ font-size:0.75rem; color:#94a3b8; margin-left:0.5rem; }}
+.standup-section {{ font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#64748b; margin-top:0.6rem; margin-bottom:2px; }}
+.standup-text   {{ font-size:0.875rem; color:#334155; line-height:1.5; }}
+
+/* ── Wiki card ── */
+.wiki-card {{
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: box-shadow 0.2s, border-color 0.2s;
+}}
+.wiki-card:hover {{ box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: #cbd5e1; }}
+.wiki-title {{ font-size:0.9375rem; font-weight:700; color:#0F172A; font-family:'Plus Jakarta Sans',sans-serif; }}
+.wiki-meta  {{ font-size:0.8125rem; color:#64748b; margin-top:3px; }}
+
+/* ── Notification badge ── */
+.notif-badge {{
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #EF4444; color: #fff;
+  font-size: 0.7rem; font-weight: 700;
+  margin-left: 6px; vertical-align: middle;
 }}
 
 /* ── Saved search pill ── */

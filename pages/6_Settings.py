@@ -9,7 +9,7 @@ import streamlit as st
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from lib.styles import inject_css, MEDPORT_TEAL, MEDPORT_BLUE, MEDPORT_DARK
+from lib.styles import inject_css, MEDPORT_TEAL, MEDPORT_BLUE, MEDPORT_DARK, DEPT_COLORS, DEPT_LABELS
 from lib.auth import check_auth, is_admin, render_logout_button
 from lib.db import get_team_members, create_team_member, update_team_member, delete_team_member
 
@@ -73,9 +73,12 @@ else:
                 member_name = member.get("name", "")
                 member_role = member.get("role", "Team Member")
                 member_email = member.get("email", "") or ""
-                avatar_color = member.get("avatar_color", MEDPORT_TEAL)
+                member_dept = member.get("department", "unassigned") or "unassigned"
+                avatar_color = member.get("department_color") or member.get("avatar_color", MEDPORT_TEAL)
                 initials = "".join(w[0].upper() for w in member_name.split()[:2])
                 email_html = f"<div style='font-size:0.75rem;color:#94a3b8;margin-top:2px;'>{member_email}</div>" if member_email else ""
+                dept_color = DEPT_COLORS.get(member_dept, "#94a3b8")
+                dept_badge = f"<span style='background:{dept_color}22;color:{dept_color};border:1px solid {dept_color}55;border-radius:999px;padding:1px 9px;font-size:0.7rem;font-weight:600;margin-top:4px;display:inline-block;'>{DEPT_LABELS.get(member_dept, member_dept.capitalize())}</span>"
 
                 st.markdown(
                     f"""
@@ -93,6 +96,7 @@ else:
                             font-family:'Plus Jakarta Sans',sans-serif;">{member_name}</div>
                           <div style="font-size:0.78rem;color:#64748b;font-weight:500;">{member_role}</div>
                           {email_html}
+                          {dept_badge}
                         </div>
                       </div>
                     </div>
@@ -106,6 +110,16 @@ else:
                         edit_name = st.text_input("Name", value=member_name, key=f"edit_name_{member_id}")
                         edit_role = st.text_input("Role", value=member_role, key=f"edit_role_{member_id}")
                         edit_email = st.text_input("Email", value=member_email, key=f"edit_email_{member_id}")
+                        dept_options = list(DEPT_LABELS.keys())
+                        current_dept = member.get("department", "unassigned") or "unassigned"
+                        dept_idx = dept_options.index(current_dept) if current_dept in dept_options else dept_options.index("unassigned")
+                        edit_dept = st.selectbox(
+                            "Department",
+                            options=dept_options,
+                            format_func=lambda d: DEPT_LABELS.get(d, d.capitalize()),
+                            index=dept_idx,
+                            key=f"edit_dept_{member_id}",
+                        )
                         c1, c2 = st.columns(2)
                         with c1:
                             if st.button("Save", key=f"save_{member_id}", type="primary", use_container_width=True):
@@ -114,6 +128,8 @@ else:
                                         "name": edit_name.strip(),
                                         "role": edit_role.strip() or "Team Member",
                                         "email": edit_email.strip() or None,
+                                        "department": edit_dept,
+                                        "department_color": DEPT_COLORS.get(edit_dept, MEDPORT_TEAL),
                                     })
                                     if ok:
                                         st.success("Saved.")
@@ -144,22 +160,33 @@ if admin:
     st.markdown("---")
     st.markdown("### Add Team Member")
 
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     with c1:
         new_name = st.text_input("Name *", key="new_name", placeholder="e.g. Sarah")
     with c2:
         new_role = st.text_input("Role *", key="new_role", placeholder="e.g. CTO & Co-Founder")
     with c3:
         new_email = st.text_input("Email (optional)", key="new_email", placeholder="sarah@medport.ca")
+    with c4:
+        new_dept = st.selectbox(
+            "Department",
+            options=list(DEPT_LABELS.keys()),
+            format_func=lambda d: DEPT_LABELS.get(d, d.capitalize()),
+            index=list(DEPT_LABELS.keys()).index("unassigned"),
+            key="new_dept",
+        )
 
     if st.button("Add Member", type="primary", key="do_add"):
         if new_name.strip() and new_role.strip():
             sort_order = max((m.get("sort_order", 0) for m in members), default=-1) + 1
+            dept_color = DEPT_COLORS.get(new_dept, MEDPORT_TEAL)
             mid = create_team_member({
                 "name": new_name.strip(),
                 "role": new_role.strip(),
                 "email": new_email.strip() or None,
-                "avatar_color": MEDPORT_TEAL,
+                "department": new_dept,
+                "department_color": dept_color,
+                "avatar_color": dept_color,
                 "is_active": True,
                 "sort_order": sort_order,
             })

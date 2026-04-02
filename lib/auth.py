@@ -6,9 +6,19 @@ Two modes (tried in order):
   2. Password gate    — if TEAM_PASSWORD secret is set (simple shared password)
 
 If neither is configured the app passes through (local dev / no-auth deploy).
+
+Extended with:
+  - get_department(email): looks up team_members.department from Supabase
+  - get_team_member_profile(email): full profile dict
+  - rate limiting: 5 failed attempts → 60s lockout (per session)
+  - session timeout: 8 hours of inactivity → auto-logout
+  - clear_session(): logout helper for all _mp_* keys
 """
 
 import os
+import time
+from datetime import datetime, timezone, timedelta
+
 import streamlit as st
 
 # Email → display name overrides (so "aravkekane@gmail.com" shows as "Arav" not "Aravkekane")
@@ -106,6 +116,90 @@ def render_logout_button():
             st.rerun()
 
 
+def clear_session():
+    """Clear all MedPort session state keys (password auth logout)."""
+    for k in list(st.session_state.keys()):
+        if k.startswith("_mp_"):
+            st.session_state.pop(k, None)
+
+
+def _record_failed_attempt():
+    """Track failed login attempts for rate limiting."""
+    now = time.time()
+    st.session_state.setdefault("_mp_login_attempts", [])
+    # Keep only attempts in the last 5 minutes
+    attempts = [t for t in st.session_state["_mp_login_attempts"] if now - t < 300]
+    attempts.append(now)
+    st.session_state["_mp_login_attempts"] = attempts
+
+
+def _is_rate_limited() -> bool:
+    """True if 5+ failed attempts within last 5 minutes."""
+    now = time.time()
+    attempts = st.session_state.get("_mp_login_attempts", [])
+    recent = [t for t in attempts if now - t < 300]
+    if len(recent) >= 5:
+        oldest = min(recent)
+        lockout_ends = oldest + 300  # 5 min window
+        remaining = int(lockout_ends - now)
+        if remaining > 0:
+            return True
+        # Window expired — clear
+        st.session_state["_mp_login_attempts"] = []
+    return False
+
+
+def _check_session_timeout():
+    """Auto-logout after 8 hours of inactivity (password auth only)."""
+    if not st.session_state.get("_mp_authenticated"):
+        return
+    last_active = st.session_state.get("_mp_last_active", time.time())
+    if time.time() - last_active > 8 * 3600:
+        clear_session()
+        st.rerun()
+    st.session_state["_mp_last_active"] = time.time()
+
+
+def get_team_member_profile(email: str) -> dict:
+    """
+    Returns the full team_members row for this email, or {} if not found.
+    Keys: id, name, role, email, department, department_color, avatar_color, is_active, sort_order
+    """
+    if not email:
+        return {}
+    try:
+        from lib.db import get_client
+        client = get_client()
+        if client is None:
+            return {}
+        result = (
+            client.table("team_members")
+            .select("*")
+            .eq("email", email.lower().strip())
+            .eq("is_active", True)
+            .limit(1)
+            .execute()
+        )
+        if result.data:
+            return result.data[0]
+        return {}
+    except Exception:
+        return {}
+
+
+def get_department(email: str) -> str:
+    """
+    Returns the department for this email from team_members table.
+    Defaults to 'leadership' for admins, 'unassigned' for unknown emails.
+    """
+    if is_admin(email):
+        # Admin is always leadership — but still check DB first for overrides
+        profile = get_team_member_profile(email)
+        return profile.get("department", "leadership") or "leadership"
+    profile = get_team_member_profile(email)
+    return profile.get("department", "unassigned") or "unassigned"
+
+
 def check_auth() -> tuple[str, str]:
     """
     Call at the top of every page. Returns (name, email).
@@ -113,6 +207,9 @@ def check_auth() -> tuple[str, str]:
     """
     if _is_local_dev():
         return get_user()
+
+    # ── Session timeout check (password auth) ────────────────────────────────
+    _check_session_timeout()
 
     # ── Mode 1: Streamlit OAuth ───────────────────────────────────────────────
     if _oauth_is_active():
@@ -216,12 +313,21 @@ def _show_password_login(team_password: str):
         pwd_input = st.text_input("Team password", type="password",
                                   key="_mp_pwd_input")
 
+        if _is_rate_limited():
+            st.error("Too many failed attempts. Please wait 5 minutes before trying again.")
+            st.stop()
+
         if st.button("Sign in", type="primary", use_container_width=True,
                      key="_mp_signin"):
             if not email_input.strip():
                 st.error("Enter your email.")
             elif pwd_input != team_password:
-                st.error("Wrong password. Ask Arav for the team password.")
+                _record_failed_attempt()
+                remaining = 5 - len([t for t in st.session_state.get("_mp_login_attempts", []) if time.time() - t < 300])
+                if remaining <= 0:
+                    st.error("Too many failed attempts. Please wait 5 minutes.")
+                else:
+                    st.error(f"Wrong password. Ask Arav for the team password. ({remaining} attempts remaining)")
             else:
                 # Check allowed emails if configured
                 allowed_raw = _secret("ALLOWED_EMAILS", "")
@@ -241,4 +347,6 @@ def _show_password_login(team_password: str):
                 st.session_state["_mp_authenticated"] = True
                 st.session_state["_mp_name"] = name
                 st.session_state["_mp_email"] = email_lower
+                st.session_state["_mp_last_active"] = time.time()
+                st.session_state["_mp_login_attempts"] = []  # reset rate limit on success
                 st.rerun()
