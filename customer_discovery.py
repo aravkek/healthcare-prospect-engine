@@ -67,8 +67,15 @@ class Institution:
     innovation_score: int = 0       # 1-10: does their public presence signal openness to tech?
     accessibility_score: int = 0    # 1-10: can a student founder get in front of the right person?
     fit_score: int = 0              # 1-10: do their stated problems match what MedPort solves?
+    startup_receptiveness: int = 0  # 1-10: evidence they work with startups/students/pilots
     competitor_risk: str = ""       # none | low | medium | high
     priority_rank: int = 0          # lower = higher priority
+    # Enriched research fields
+    emr_system: str = ""            # EMR/EHR they use (Jane, OSCAR, Epic, Accuro, etc.)
+    patient_volume: str = ""        # estimated patient/student count
+    existing_ai_tools: str = ""     # any AI health tools detected
+    phone_intake_evidence: str = "" # verbatim evidence for phone-only classification
+    score_breakdown: str = ""       # JSON: per-dimension scores + 1-line reason
     research_notes: str = ""        # what was found during research
     outreach_angle: str = ""        # the specific hook to use in cold outreach to this institution
     source: str = ""                # where this institution came from
@@ -528,7 +535,7 @@ def _gather_external_intel(name: str, city: str, country: str, website: str) -> 
         "patient_complaints": "",
         "job_postings": "",
         "recent_news": "",
-        "competitor_mentions": "",
+        "competitor_research": "",
         "patient_count_signal": "",
     }
 
@@ -569,11 +576,26 @@ def _gather_external_intel(name: str, city: str, country: str, website: str) -> 
 
     time.sleep(0.3)
 
-    # 4. Competitor mentions — are they already using a competitor?
-    competitor_names = "Novoflow OR Decoda OR Hyro OR Syllable OR Artera OR Nuance OR Vocca OR Weave OR Klara OR \"Luma Health\" OR \"Assort Health\" OR \"Pine AI\""
-    comp = _ddg_search(f'"{name}" {competitor_names}', max_results=2)
-    if comp:
-        intel["competitor_mentions"] = comp
+    # 4. Targeted competitor searches — the REAL way to detect competitor risk
+    comp_signals = []
+    high_value_competitors = [
+        ("Nuance", "Nuance DAX"),
+        ("Vocca", "Vocca"),
+        ("Hyro", "Hyro"),
+        ("Syllable", "Syllable"),
+        ("Artera", "Artera"),
+        ("Weave", "Weave"),
+        ("Novoflow", "Novoflow"),
+        ("Decoda", "Decoda Health"),
+        ("Pine AI", "Pine AI"),
+    ]
+    for search_term, comp_name in high_value_competitors[:4]:  # cap at 4 to avoid too many requests
+        result = _ddg_search(f'"{name}" {search_term}', max_results=1)
+        if result and len(result) > 20:  # got a real result
+            comp_signals.append(f"{comp_name}: {result[:150]}")
+        time.sleep(0.2)
+
+    intel["competitor_research"] = " | ".join(comp_signals) if comp_signals else "no matches found in targeted searches"
 
     time.sleep(0.3)
 
@@ -588,7 +610,7 @@ def _gather_external_intel(name: str, city: str, country: str, website: str) -> 
     return intel
 
 
-def call_groq(prompt: str, groq_api_key: str, model: str = "llama-3.3-70b-versatile") -> str:
+def call_groq(prompt: str, groq_api_key: str, model: str = "llama-3.3-70b-versatile", max_tokens: int = 900) -> str:
     """Call Groq's OpenAI-compatible chat completions endpoint."""
     resp = requests.post(
         "https://api.groq.com/openai/v1/chat/completions",
@@ -596,7 +618,7 @@ def call_groq(prompt: str, groq_api_key: str, model: str = "llama-3.3-70b-versat
         json={
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": 800,
+            "max_tokens": max_tokens,
             "temperature": 0.1
         },
         timeout=30
@@ -635,23 +657,48 @@ EXTERNAL INTELLIGENCE:
   Patient complaints about phones/wait: {patient_complaints}
   Job postings for admin/receptionist roles: {job_postings}
   Recent news (expansion, funding, staffing): {recent_news}
-  Competitor product mentions in news/reviews: {competitor_mentions}
+  Targeted competitor searches (searched each competitor individually): {competitor_research}
   Patient volume signals: {patient_count_signal}
 
 ---
 YOUR JOB:
 
-1. SCORE this institution honestly on three dimensions:
-   - fit_score (1-10): ONLY high if phones are clearly the booking method AND they show admin burden
-     * 9-10: Phone-only booking confirmed, patient complaints about wait, or job postings for reception = PERFECT
-     * 7-8: Phone likely primary, mixed signals
-     * 4-6: Has online booking but phones still used for intake/overflow
-     * 1-3: Fully online self-serve, very little phone burden
-   - innovation_score (1-10): Tech adoption signals, past startup partnerships, digital health language, government innovation grants
-   - accessibility_score (1-10): Can a 22-year-old student founder get a reply?
-     * 9-10: Small org, named director reachable by email, warm intro exists
-     * 6-8: Mid-size, email reach is realistic
-     * 1-5: Large health system, hospital network, requires procurement process
+SCORING RULES — follow these strictly, they override your intuition:
+
+fit_score:
+- 10: Phone-only booking CONFIRMED by verbatim quote from website ("call us to book" etc.) + patient complaints about phones found
+- 8-9: Phone-only booking confirmed by website language OR patient complaints found, not both
+- 6-7: No online booking platform detected but no explicit "call to book" language either — likely phone-dependent
+- 4-5: Has online booking (Jane App, Zocdoc, etc.) but may still use phones for intake/overflow
+- 1-3: Fully self-serve online, patients rarely need to call
+
+innovation_score:
+- 9-10: Explicit digital health initiative, AI grant, startup partnership, innovation lab, or telehealth expansion mentioned
+- 7-8: Some tech language, recent digital update, cloud EHR mentioned, or online services added recently
+- 5-6: Standard website, neutral on tech — typical for the institution type
+- 3-4: Very traditional, no tech language, paper-based processes visible
+- 1-2: Explicitly resistant to change, heavy bureaucracy, or very old infrastructure signals
+
+accessibility_score:
+- 9-10: Named director found, small org (<10 practitioners or single-site clinic), warm intro exists
+- 7-8: Title of right person known, mid-size org, direct email or LinkedIn likely reachable
+- 5-6: Organization of 50-200 staff, will need to find right person
+- 3-4: Large multi-site org (200+ staff), requires navigating layers
+- 1-2: Major health system / hospital network, requires formal procurement
+
+startup_receptiveness:
+- 9-10: Evidence of startup pilots, student partnerships, innovation grants, CHC/FQHC with tech mandate, or university research affiliation
+- 7-8: Progressive organization culture, leadership language about innovation, or posted about partnerships
+- 5-6: Neutral — typical healthcare org with no strong signals either way
+- 3-4: Large established system, conservative procurement language, or history of vendor lock-in
+- 1-2: Government-run, union-heavy, or publicly stated preference for established vendors only
+
+priority_tier:
+- A: fit_score >= 8 OR (fit_score >= 6 AND startup_receptiveness >= 7 AND competitor_risk != high)
+- B: fit_score >= 5 AND competitor_risk != high
+- C: fit_score < 5 OR competitor_risk == high
+
+1. SCORE this institution on three dimensions (use the rules above):
 
 2. WRITE the outreach angle like THIS:
    BAD (generic, will be ignored): "Your clinic likely receives many calls. MedPort can help."
@@ -674,24 +721,32 @@ Respond ONLY with valid JSON (no markdown fences, no explanation):
   "innovation_score": <1-10>,
   "accessibility_score": <1-10>,
   "fit_score": <1-10>,
+  "startup_receptiveness": <1-10>,
   "phone_dependency": "<phone-only|mixed|online-only|unknown>",
+  "phone_intake_evidence": "<verbatim quote from website confirming phone-only, or 'none found'>",
   "booking_system_used": "<platform name OR 'phone only' OR 'unknown'>",
+  "emr_system": "<EMR/EHR detected: Jane App / OSCAR / Epic / Accuro / PointClickCare / other / unknown>",
+  "patient_volume": "<estimated patients or students served: e.g. '~8,000 students enrolled' or '15,000 patient visits/yr' or 'unknown'>",
   "estimated_weekly_call_volume": "<low <50/wk | medium 50-200/wk | high 200+/wk | unknown>",
+  "existing_ai_tools": "<any AI health tools found: e.g. 'Luma Health for reminders' or 'none detected'>",
   "competitor_risk": "<none|low|medium|high>",
   "competitors_found": "<comma-separated list or 'none'>",
-  "existing_ai_tools": "<tools found or 'none detected'>",
+  "score_breakdown": "<fit: X/10 — reason | innovation: X/10 — reason | access: X/10 — reason | startup_fit: X/10 — reason>",
   "decision_maker_name": "<name from website/about page, else empty>",
   "decision_maker_title": "<exact title to cold-email at this institution type>",
   "decision_maker_linkedin_search": "<first last title org LinkedIn>",
   "personalization_hooks": "<hook 1> | <hook 2> | <hook 3>",
-  "research_notes": "<4-5 sentences: booking method evidence with quotes, patient volume, admin burden signals, tech posture, honest assessment of whether they'll say yes>",
+  "research_notes": "<4-5 sentences: booking method with verbatim quotes, patient volume, admin burden signals, tech posture, honest assessment of whether they'll say yes>",
   "outreach_angle": "<2-3 sentences — specific, evidence-based, references real finding, ends with zero-risk ask. Written AS Arav, a student founder who did his homework.>",
   "priority_tier": "<A = email this week | B = email this month | C = pipeline only>"
 }}"""
 
 
-def _parse_groq_response(content: str, inst: Institution) -> Institution:
+def _parse_groq_response(content: str, inst: Institution, booking_scan_hints: dict = None) -> Institution:
     """Parse Groq JSON response and populate institution fields."""
+    if booking_scan_hints is None:
+        booking_scan_hints = {}
+
     # Strip markdown code fences if the model wrapped the JSON
     content = content.strip()
     if content.startswith("```"):
@@ -707,7 +762,25 @@ def _parse_groq_response(content: str, inst: Institution) -> Institution:
     inst.innovation_score = int(data.get("innovation_score", inst.innovation_score) or 0)
     inst.accessibility_score = int(data.get("accessibility_score", inst.accessibility_score) or 0)
     inst.fit_score = int(data.get("fit_score", inst.fit_score) or 0)
+    inst.startup_receptiveness = int(data.get("startup_receptiveness", inst.startup_receptiveness) or 0)
     inst.competitor_risk = str(data.get("competitor_risk", inst.competitor_risk) or "none")
+
+    # New enriched fields
+    emr = str(data.get("emr_system", "") or "").strip()
+    if emr:
+        inst.emr_system = emr
+    pv = str(data.get("patient_volume", "") or "").strip()
+    if pv:
+        inst.patient_volume = pv
+    ai_tools = str(data.get("existing_ai_tools", "") or "").strip()
+    if ai_tools:
+        inst.existing_ai_tools = ai_tools
+    phone_ev = str(data.get("phone_intake_evidence", "") or "").strip()
+    if phone_ev and phone_ev.lower() != "none found":
+        inst.phone_intake_evidence = phone_ev
+    score_bd = str(data.get("score_breakdown", "") or "").strip()
+    if score_bd:
+        inst.score_breakdown = score_bd
 
     # Only overwrite decision maker fields if we got something new and useful
     dm_name = str(data.get("decision_maker_name", "") or "").strip()
@@ -744,6 +817,40 @@ def _parse_groq_response(content: str, inst: Institution) -> Institution:
     inst.innovation_score = max(1, min(10, inst.innovation_score))
     inst.accessibility_score = max(1, min(10, inst.accessibility_score))
     inst.fit_score = max(1, min(10, inst.fit_score))
+    inst.startup_receptiveness = max(1, min(10, inst.startup_receptiveness))
+
+    # Aggressive fit boost: phone-only confirmed gets +1 after clamping
+    if data.get("phone_dependency") == "phone-only":
+        inst.fit_score = min(10, inst.fit_score + 1)
+
+    # Auto-Tier-A rules (override Groq if strong signal detected)
+    auto_tier_a = False
+
+    # Rule 1: Phone-only confirmed + no/low competitor risk + accessible
+    if (data.get("phone_dependency") == "phone-only"
+            and inst.competitor_risk in ("none", "low")
+            and inst.accessibility_score >= 6):
+        auto_tier_a = True
+
+    # Rule 2: Patient complaints about phones/wait confirmed
+    if booking_scan_hints.get("has_patient_complaints") and inst.fit_score >= 6:
+        auto_tier_a = True
+
+    # Rule 3: Active job posting for receptionist/admin (understaffed right now)
+    if booking_scan_hints.get("has_job_posting") and inst.fit_score >= 5:
+        auto_tier_a = True
+
+    # Rule 4: Known warm intro preserved in research_notes
+    if inst.decision_maker_name and ("intro" in inst.decision_maker_name.lower()
+       or "demo" in (inst.research_notes or "").lower()):
+        auto_tier_a = True
+
+    # Rule 5: High startup receptiveness + phone-dependent
+    if inst.startup_receptiveness >= 8 and inst.fit_score >= 6:
+        auto_tier_a = True
+
+    if auto_tier_a:
+        inst.priority_rank = 1
 
     return inst
 
@@ -786,30 +893,53 @@ def research_institution_groq(inst: Institution, groq_api_key: str) -> Instituti
         patient_complaints=(intel["patient_complaints"] or "none found")[:300],
         job_postings=(intel["job_postings"] or "none found")[:200],
         recent_news=(intel["recent_news"] or "none found")[:200],
-        competitor_mentions=(intel["competitor_mentions"] or "none found")[:200],
+        competitor_research=(intel["competitor_research"] or "no matches found in targeted searches")[:300],
         patient_count_signal=(intel["patient_count_signal"] or "unknown")[:150],
     )
 
-    # Rate limiting: free tier 6000 tokens/min for llama-3.3-70b
-    # With deep research prompts (~2500 tokens each), allow ~15s between calls
-    # Retry up to 3 times with exponential backoff on 429
+    # Build booking_scan_hints from intel for auto-tier rules
+    complaint_keywords = ["wait", "phone", "couldn't", "busy", "hold", "long time", "hard to reach"]
+    booking_scan_hints = {
+        "has_patient_complaints": any(kw in intel.get("patient_complaints", "").lower() for kw in complaint_keywords),
+        "has_job_posting": len(intel.get("job_postings", "")) > 30,
+    }
+
+    # Rate limiting: try 70B once (best quality), immediately fall back to 8B on 429
+    # 70B: 6K TPM daily quota; 8B: 30K TPM, 131K context — reliable fallback
+    # _70b_exhausted is a module-level flag so we skip 70B for the whole run once it fails
     raw = None
-    for attempt in range(3):
+    models_to_try = []
+    if not globals().get("_70b_exhausted", False):
+        models_to_try.append("llama-3.3-70b-versatile")
+    models_to_try.append("llama-3.1-8b-instant")
+
+    for model_id in models_to_try:
         try:
-            raw = call_groq(prompt, groq_api_key)
+            raw = call_groq(prompt, groq_api_key, model=model_id)
             break
         except requests.HTTPError as e:
             if e.response is not None and e.response.status_code == 429:
-                wait = 20 * (attempt + 1)  # 20s, 40s, 60s
-                print(f" [rate limit, waiting {wait}s]", end="", flush=True)
-                time.sleep(wait)
+                if model_id == "llama-3.3-70b-versatile":
+                    # Mark 70B as exhausted for this run — skip it going forward
+                    globals()["_70b_exhausted"] = True
+                    print(f" [70B quota exhausted, switching to 8B]", end="", flush=True)
+                    time.sleep(3)  # brief pause before 8B attempt
+                else:
+                    # 8B also rate-limited — wait and retry once
+                    print(f" [rate limit 8B, waiting 10s]", end="", flush=True)
+                    time.sleep(10)
+                    try:
+                        raw = call_groq(prompt, groq_api_key, model=model_id)
+                    except requests.HTTPError:
+                        pass
+                    break
             else:
                 raise
     if raw is None:
-        raise RuntimeError("Groq API rate limit — all retries exhausted")
+        raise RuntimeError("Groq API rate limit — all retries exhausted on both models")
 
     try:
-        inst = _parse_groq_response(raw, inst)
+        inst = _parse_groq_response(raw, inst, booking_scan_hints=booking_scan_hints)
     except (json.JSONDecodeError, KeyError, ValueError) as e:
         print(f" [Groq JSON parse error: {e} — falling back to keyword scoring]", end="", flush=True)
         inst = _keyword_score_fallback(inst, main_text)
@@ -1042,7 +1172,10 @@ def research_all(institutions: list[Institution],
 
 FIELDS = [
     "priority_rank", "name", "inst_type", "city", "province_state", "country",
-    "innovation_score", "accessibility_score", "fit_score", "competitor_risk",
+    "innovation_score", "accessibility_score", "fit_score", "startup_receptiveness",
+    "competitor_risk",
+    "emr_system", "patient_volume", "existing_ai_tools", "phone_intake_evidence",
+    "score_breakdown",
     "decision_maker_name", "decision_maker_title", "decision_maker_linkedin",
     "website", "phone", "email",
     "outreach_angle", "research_notes", "source"
@@ -1115,7 +1248,13 @@ def upsert_to_supabase(
             "innovation_score": inst.innovation_score,
             "accessibility_score": inst.accessibility_score,
             "fit_score": inst.fit_score,
+            "startup_receptiveness": inst.startup_receptiveness,
             "competitor_risk": inst.competitor_risk,
+            "emr_system": inst.emr_system,
+            "patient_volume": inst.patient_volume,
+            "existing_ai_tools": inst.existing_ai_tools,
+            "phone_intake_evidence": inst.phone_intake_evidence,
+            "score_breakdown": inst.score_breakdown,
             "priority_rank": inst.priority_rank,
             "research_notes": inst.research_notes,
             "outreach_angle": inst.outreach_angle,
@@ -1123,14 +1262,141 @@ def upsert_to_supabase(
         }
         rows.append(row)
 
-    # Upsert in batches of 50
+    # New enriched columns — only include if migration has been run
+    NEW_COLS = {"startup_receptiveness", "emr_system", "patient_volume",
+                "existing_ai_tools", "phone_intake_evidence", "score_breakdown"}
+
+    # Upsert in batches of 50; fall back to dropping new cols if schema not migrated yet
     for i in range(0, len(rows), 50):
         batch = rows[i : i + 50]
-        client.table("prospects").upsert(
-            batch, on_conflict="name", ignore_duplicates=False
-        ).execute()
+        try:
+            client.table("prospects").upsert(
+                batch, on_conflict="name", ignore_duplicates=False
+            ).execute()
+        except Exception as e:
+            if "column" in str(e).lower() or "schema" in str(e).lower():
+                # Schema not migrated yet — drop new columns and retry
+                print("\n  [Supabase] New columns not found — run migrate_supabase.sql in dashboard. Upserting without new fields.")
+                fallback_batch = [{k: v for k, v in row.items() if k not in NEW_COLS} for row in batch]
+                client.table("prospects").upsert(
+                    fallback_batch, on_conflict="name", ignore_duplicates=False
+                ).execute()
+            else:
+                raise
 
     print(f"\n[Supabase] Upserted {len(rows)} institutions to prospects table.")
+
+
+# ─────────────────────────────────────────────
+# Deep-dive mode
+# ─────────────────────────────────────────────
+
+def deep_dive_institution(inst: Institution, groq_api_key: str) -> str:
+    """
+    Full deep-dive on a single institution. Returns a formatted research brief
+    + ready-to-send email template. Called when --deep-dive flag is used.
+    """
+    print(f"\nRunning deep-dive on: {inst.name}\n{'='*60}")
+
+    # 1. Scrape main site + ALL relevant sub-pages (up to 8)
+    pages_text = {}
+    all_paths = [
+        "", "/appointments", "/book", "/about", "/about-us", "/team",
+        "/staff", "/contact", "/services", "/new-patients", "/patient-info",
+        "/hours", "/faq", "/technology", "/innovation"
+    ]
+    headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
+    base = inst.website.rstrip("/") if inst.website else ""
+
+    for path in all_paths:
+        if len(pages_text) >= 8:
+            break
+        url = base + path if path else base
+        if not url:
+            continue
+        try:
+            resp = requests.get(url, headers=headers, timeout=10)
+            if resp.status_code == 200:
+                soup = BeautifulSoup(resp.text, "html.parser")
+                for tag in soup(["script", "style", "nav", "footer"]):
+                    tag.decompose()
+                text = " ".join(soup.get_text(separator=" ", strip=True).split())
+                if len(text) > 100:
+                    pages_text[path or "homepage"] = text[:2500]
+                    print(f"  Scraped: {url} ({len(text)} chars)")
+        except Exception:
+            pass
+        time.sleep(0.3)
+
+    # 2. Extended external intel (more searches, longer results)
+    print("  Running extended searches...")
+    intel = {}
+
+    searches = [
+        ("patient_reviews", f'"{inst.name}" reviews patients OR appointment OR "wait time" OR "phone" OR "hard to reach"'),
+        ("job_postings_detail", f'"{inst.name}" receptionist OR "medical secretary" OR "patient services" site:indeed.com OR site:linkedin.com'),
+        ("news_funding", f'"{inst.name}" 2024 OR 2025 OR 2026 news funding expansion technology'),
+        ("competitor_nuance", f'"{inst.name}" Nuance OR "voice AI" OR "AI phone" OR "AI assistant"'),
+        ("competitor_others", f'"{inst.name}" Hyro OR Syllable OR Artera OR Vocca OR Novoflow OR "Decoda" OR "Pine AI"'),
+        ("google_maps_reviews", f'"{inst.name}" {inst.city} "google reviews" OR "1 star" OR "2 star" OR "phone" OR "wait"'),
+        ("staff_count", f'"{inst.name}" "practitioners" OR "physicians" OR "staff" OR "serve" OR "patients per year"'),
+        ("tech_stack", f'"{inst.name}" "electronic health" OR EHR OR EMR OR "Jane App" OR "Epic" OR technology'),
+    ]
+
+    for key, query in searches:
+        result = _ddg_search(query, max_results=3)
+        intel[key] = result or "none found"
+        time.sleep(0.4)
+
+    # 3. Send everything to Groq for a comprehensive brief
+    all_website_text = "\n\n".join(f"[{path}]:\n{text}" for path, text in pages_text.items())
+
+    deep_prompt = f"""You are writing a comprehensive sales intelligence brief for MedPort, an AI voice agent startup targeting healthcare institutions.
+
+MedPort's product: AI answers all patient phone calls 24/7, books appointments, captures intake, exports to Google Sheets or EHR. $300-600/month. No IT project. Just redirect the phone number. Free 30-day pilot.
+
+INSTITUTION: {inst.name}
+Type: {inst.inst_type} | Location: {inst.city}, {inst.province_state}, {inst.country}
+Website: {inst.website}
+
+=== WEBSITE CONTENT (8 pages scraped) ===
+{all_website_text[:4000]}
+
+=== EXTERNAL INTELLIGENCE ===
+Patient reviews/complaints: {intel.get('patient_reviews', 'none')[:400]}
+Job postings: {intel.get('job_postings_detail', 'none')[:300]}
+Recent news/funding: {intel.get('news_funding', 'none')[:300]}
+Competitor (Nuance/voice AI) mentions: {intel.get('competitor_nuance', 'none')[:300]}
+Competitor (others) mentions: {intel.get('competitor_others', 'none')[:300]}
+Google Maps/reviews signals: {intel.get('google_maps_reviews', 'none')[:300]}
+Staff/patient count signals: {intel.get('staff_count', 'none')[:300]}
+Tech stack signals: {intel.get('tech_stack', 'none')[:300]}
+
+=== YOUR JOB ===
+Write a full sales intelligence brief with these sections. Be specific — reference actual things found:
+
+1. BOOKING METHOD VERDICT (2-3 sentences): How do patients actually book? Phone only? Online? Mixed? What's the evidence?
+
+2. PHONE BURDEN ASSESSMENT (2-3 sentences): How bad is the admin phone problem? Evidence from reviews, job postings, site language?
+
+3. DECISION MAKER (2-3 sentences): Who should Arav email? What's their name/title if findable? What matters to them?
+
+4. COMPETITOR RISK (2-3 sentences): Any evidence of existing AI phone tools? Be honest — if you found nothing, say "no evidence found."
+
+5. WHY THEY'LL SAY YES (2-3 sentences): Specific reasons this institution will say yes to a student founder demo. Their culture, funding model, pain level.
+
+6. WHY THEY'LL SAY NO (1-2 sentences): Honest red flags. Procurement bureaucracy? Already has online booking? Competitor?
+
+7. OUTREACH EMAIL (ready to send):
+Subject line: [specific, not salesy, references something real about them]
+Email body: [150-200 words, from Arav, student founder at [University], references specific real findings, asks for 15-min Zoom or "can I send a 2-min demo?", mentions free pilot]
+
+Write everything as if you've done real research, because you have."""
+
+    # llama-3.1-8b-instant: 131K context window, 30,000 TPM — handles large deep-dive prompts
+    print("  Sending to Groq (llama-3.1-8b-instant) for comprehensive brief...")
+    raw = call_groq(deep_prompt, groq_api_key, model="llama-3.1-8b-instant", max_tokens=1500)
+    return raw
 
 
 # ─────────────────────────────────────────────
@@ -1169,6 +1435,8 @@ def main():
         default=False,
         help="Upsert results to Supabase after Stage 3 (requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)",
     )
+    parser.add_argument("--deep-dive", type=str, default=None, metavar="NAME",
+                        help="Run full deep-dive research on a single institution by name")
     args = parser.parse_args()
 
     countries = {
@@ -1182,6 +1450,31 @@ def main():
     print("="*60)
 
     groq_key = args.groq_key or os.environ.get("GROQ_API_KEY")
+
+    if args.deep_dive:
+        if not groq_key:
+            print("ERROR: GROQ_API_KEY required for deep-dive")
+            sys.exit(1)
+        # Find institution in seeds
+        all_insts = build_institution_list(include_countries=["CA", "US"])
+        name_lower = args.deep_dive.lower()
+        matches = [i for i in all_insts if name_lower in i.name.lower()]
+        if not matches:
+            print(f"No institution found matching: {args.deep_dive}")
+            print("Try: python customer_discovery.py --stage1-only to see all names")
+            sys.exit(1)
+        inst = matches[0]
+        brief = deep_dive_institution(inst, groq_key)
+        print("\n" + "="*60)
+        print(brief)
+        print("="*60)
+        # Save brief to file
+        safe_name = inst.name.lower().replace(" ", "_")[:30]
+        out_file = f"deepdive_{safe_name}.txt"
+        with open(out_file, "w") as f:
+            f.write(f"DEEP DIVE: {inst.name}\n{'='*60}\n\n{brief}\n")
+        print(f"\nSaved to: {out_file}")
+        return
     if not groq_key and not args.stage1_only:
         print("No GROQ_API_KEY found. Using keyword-based scoring (less accurate).")
         print("Get a free key at https://console.groq.com and set GROQ_API_KEY env var.")
