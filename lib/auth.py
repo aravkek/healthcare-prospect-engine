@@ -2,6 +2,10 @@
 MedPort auth helpers.
 Every page calls check_auth() at the top to get (name, email).
 LOCAL_DEV=true env var bypasses auth for local testing.
+
+Auth detection: uses st.experimental_user.is_logged_in directly.
+Streamlit Cloud OAuth is configured via their UI, NOT via secrets.toml,
+so checking secrets for [auth] keys always fails on Cloud.
 """
 
 import os
@@ -18,21 +22,25 @@ def _secret(key: str, default: str = "") -> str:
         return default
 
 
-def _auth_is_configured() -> bool:
+def _is_local_dev() -> bool:
+    return os.environ.get("LOCAL_DEV", "false").lower() == "true"
+
+
+def _auth_is_active() -> bool:
     """
-    Returns True if the [auth] section in Streamlit secrets is properly set up.
-    Checks for redirect_uri or providers — not just the presence of the section.
+    Returns True if Streamlit's auth system is active (user object has is_logged_in).
+    Works whether auth is configured via secrets.toml OR Streamlit Cloud UI.
     """
     try:
-        auth = st.secrets.get("auth", {}) or {}
-        return bool(auth.get("redirect_uri") or auth.get("providers") or auth.get("cookie_secret"))
-    except Exception:
+        _ = st.experimental_user.is_logged_in
+        return True
+    except AttributeError:
         return False
 
 
 def get_user() -> tuple[str, str]:
     """Returns (name, email). Never raises."""
-    if os.environ.get("LOCAL_DEV", "false").lower() == "true":
+    if _is_local_dev():
         return (
             os.environ.get("DEV_USER_NAME", "Arav (dev)"),
             os.environ.get("DEV_USER_EMAIL", "aravkekane@gmail.com"),
@@ -57,28 +65,33 @@ def is_admin(email: str) -> bool:
 
 def render_logout_button():
     """
-    Renders a Sign Out button in the current context (call inside a sidebar block).
-    Always shown when auth is configured, regardless of page.
+    Renders a Sign Out button. Call inside a sidebar block on every page.
+    Shows only when auth is active and user is logged in.
     """
-    local_dev = os.environ.get("LOCAL_DEV", "false").lower() == "true"
-    if _auth_is_configured() and not local_dev:
-        if st.button("Sign out", key="global_signout", use_container_width=True):
-            st.logout()
+    if _is_local_dev():
+        return
+    try:
+        if st.experimental_user.is_logged_in:
+            if st.button("Sign out", key="global_signout", use_container_width=True):
+                st.logout()
+    except AttributeError:
+        pass  # auth not configured
 
 
 def check_auth() -> tuple[str, str]:
     """
     Call at the top of every page. Returns (name, email).
-    Shows Google login screen if not authenticated.
+    Shows Google login screen if auth is active but user is not logged in.
+    Passes through silently if auth is not configured at all.
     """
-    local_dev = os.environ.get("LOCAL_DEV", "false").lower() == "true"
-    auth_configured = _auth_is_configured()
-
-    # No auth configured or local dev — pass through
-    if local_dev or not auth_configured:
+    if _is_local_dev():
         return get_user()
 
-    # Check login state
+    # If Streamlit auth isn't active at all, just pass through
+    if not _auth_is_active():
+        return get_user()
+
+    # Auth is active — enforce login
     try:
         is_logged_in = st.experimental_user.is_logged_in
     except AttributeError:
@@ -108,7 +121,7 @@ def check_auth() -> tuple[str, str]:
 
 
 def _show_login_screen():
-    from lib.styles import MEDPORT_TEAL, MEDPORT_BLUE, MEDPORT_DARK, inject_css
+    from lib.styles import MEDPORT_TEAL, MEDPORT_BLUE, inject_css
     inject_css()
 
     st.markdown("<br><br>", unsafe_allow_html=True)
@@ -125,7 +138,7 @@ def _show_login_screen():
                 background-clip:text;margin-bottom:0.3rem;">
                 MedPort
               </div>
-              <div style="font-size:0.88rem;color:#64748b;margin-bottom:2rem;font-weight:500;">
+              <div style="font-size:0.9rem;color:#64748b;margin-bottom:2rem;font-weight:500;">
                 Team Intelligence Hub
               </div>
               <div style="font-size:0.9rem;color:#475569;margin-bottom:1.5rem;">
