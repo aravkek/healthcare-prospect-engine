@@ -116,3 +116,50 @@ def render_sprint_widget(sprint: dict, tasks: list[dict], current_email: str = "
             "No tasks assigned for this sprint yet.</div>",
             unsafe_allow_html=True,
         )
+
+
+def render_create_sprint_form(creator_email: str):
+    """Renders a form to create a new sprint. Call only when admin and no active sprint."""
+    with st.expander("Create New Sprint", expanded=False):
+        from lib.db import create_sprint, get_sprints, update_sprint
+
+        col1, col2 = st.columns(2)
+        with col1:
+            sprint_name = st.text_input(
+                "Sprint Name *",
+                placeholder="e.g. Sprint 3 — April 2026",
+                max_chars=100,
+                key="new_sprint_name",
+            )
+            sprint_start = st.date_input("Start Date", key="new_sprint_start")
+        with col2:
+            sprint_desc = st.text_area(
+                "Description",
+                max_chars=500,
+                height=70,
+                placeholder="Sprint goals and focus...",
+                key="new_sprint_desc",
+            )
+            sprint_end = st.date_input("End Date", key="new_sprint_end")
+
+        if st.button("Create Sprint", type="primary", key="create_sprint_btn"):
+            if not sprint_name.strip():
+                st.error("Sprint name is required.")
+            elif sprint_end <= sprint_start:
+                st.error("End date must be after start date.")
+            else:
+                # Mark any currently active sprints as completed
+                for s in get_sprints(status="active"):
+                    update_sprint(s["id"], {"status": "completed"})
+
+                sid = create_sprint({
+                    "name": sprint_name.strip(),
+                    "description": sprint_desc.strip(),
+                    "start_date": sprint_start.isoformat(),
+                    "end_date": sprint_end.isoformat(),
+                    "status": "active",
+                    "created_by_email": creator_email,
+                })
+                if sid:
+                    st.success(f"Sprint '{sprint_name.strip()}' created!")
+                    st.rerun()
