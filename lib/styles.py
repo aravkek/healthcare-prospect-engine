@@ -198,10 +198,10 @@ section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"]:hover {{
 }}
 
 /* ── Hide Streamlit chrome (GitHub link, deploy button, footer) ── */
-#MainMenu { visibility: hidden; }
-footer { visibility: hidden; }
-[data-testid="stToolbar"] { display: none !important; }
-[data-testid="stDecoration"] { display: none !important; }
+#MainMenu {{ visibility: hidden; }}
+footer {{ visibility: hidden; }}
+[data-testid="stToolbar"] {{ display: none !important; }}
+[data-testid="stDecoration"] {{ display: none !important; }}
 
 /* ── Badge base class ── */
 .mp-badge {{
