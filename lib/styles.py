@@ -214,8 +214,11 @@ section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"]:hover {{
   font-weight: 400;
 }}
 
-/* ── Hide only the footer watermark ── */
+/* ── Hide Streamlit chrome ── */
 footer {{ visibility: hidden; }}
+[data-testid="stToolbar"] {{ display: none !important; }}
+[data-testid="stDecoration"] {{ display: none !important; }}
+header[data-testid="stHeader"] a[href*="github"] {{ display: none !important; }}
 
 /* ── Badge base class ── */
 .mp-badge {{
