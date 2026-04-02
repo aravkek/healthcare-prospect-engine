@@ -3,3 +3,4 @@ beautifulsoup4
 pandas
 streamlit>=1.37.0
 supabase
+anthropic>=0.30.0
