@@ -57,25 +57,43 @@ def get_user() -> tuple[str, str]:
 
 
 def is_admin(email: str) -> bool:
-    hardcoded = {"aravkekane@gmail.com", "arav@medport.ca"}
+    email_lower = (email or "").lower().strip()
+    hardcoded = {"aravkekane@gmail.com", "arav@medport.ca", "arav@medport.health"}
     extra_raw = _secret("ADMIN_EMAILS", "")
     extras = {e.strip().lower() for e in extra_raw.split(",") if e.strip()}
-    return (email or "").lower() in (hardcoded | extras)
+    all_admins = hardcoded | extras
+    # Exact match OR any arav@* medport address
+    if email_lower in all_admins:
+        return True
+    # Fallback: first name is arav + medport domain
+    if email_lower.startswith("arav@") and "medport" in email_lower:
+        return True
+    return False
 
 
 def render_logout_button():
     """
     Renders a Sign Out button. Call inside a sidebar block on every page.
-    Shows only when auth is active and user is logged in.
+    Shows whenever auth is active (is_logged_in=True) OR user has an email.
     """
     if _is_local_dev():
         return
     try:
-        if st.experimental_user.is_logged_in:
+        user = st.experimental_user
+        logged_in = getattr(user, "is_logged_in", None)
+        email = getattr(user, "email", "") or ""
+        # Show button if explicitly logged in, or if we have any email at all
+        if logged_in or email:
+            if email:
+                st.markdown(
+                    f"<div style='font-size:0.75rem;color:#64748b;padding:2px 0 4px 0;"
+                    f"word-break:break-all;'>{email}</div>",
+                    unsafe_allow_html=True,
+                )
             if st.button("Sign out", key="global_signout", use_container_width=True):
                 st.logout()
-    except AttributeError:
-        pass  # auth not configured
+    except Exception:
+        pass
 
 
 def check_auth() -> tuple[str, str]:
