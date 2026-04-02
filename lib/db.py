@@ -546,24 +546,12 @@ def get_team_members() -> list[dict]:
             .execute()
         )
         members = result.data or []
-        if members:
-            return members
-        # Table exists but empty — fall back to hardcoded list
-        return [
-            {
-                "id": str(i),
-                "name": m,
-                "role": "Team Member",
-                "email": "",
-                "avatar_color": MEDPORT_TEAL,
-                "is_active": True,
-                "sort_order": i,
-            }
-            for i, m in enumerate(TEAM_MEMBERS)
-            if m != "Unassigned"
-        ]
+        # Return DB results only — even if empty. Never return fake integer IDs
+        # when the table exists, as those break UUID-typed update calls.
+        return members
     except Exception:
-        # Table doesn't exist yet — fall back gracefully
+        # Table doesn't exist yet — fall back gracefully with fake IDs
+        # (read-only display only; edits will fail until table is created)
         from lib.styles import TEAM_MEMBERS, MEDPORT_TEAL
         return [
             {
