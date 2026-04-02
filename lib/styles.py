@@ -214,12 +214,8 @@ section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"]:hover {{
   font-weight: 400;
 }}
 
-/* ── Hide Streamlit chrome (GitHub link, deploy button, footer) ── */
+/* ── Hide only the footer watermark ── */
 footer {{ visibility: hidden; }}
-[data-testid="stToolbar"] {{ display: none !important; }}
-[data-testid="stDecoration"] {{ display: none !important; }}
-/* Keep sidebar collapse/expand button always visible */
-[data-testid="stSidebarCollapsedControl"] {{ display: flex !important; visibility: visible !important; }}
 
 /* ── Badge base class ── */
 .mp-badge {{
