@@ -180,7 +180,7 @@ with st.sidebar:
 # ─── Page header ─────────────────────────────────────────────────────────────
 
 st.markdown(
-    f'<div style="font-size:1.9rem;font-weight:800;color:{MEDPORT_DARK};font-family:Syne,sans-serif;margin-bottom:0.2rem;">AI Research Assistant</div>',
+    '<div class="page-title" style="margin-bottom:0.2rem;">AI Research Assistant</div>',
     unsafe_allow_html=True,
 )
 st.markdown(

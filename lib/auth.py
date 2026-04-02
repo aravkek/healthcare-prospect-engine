@@ -150,10 +150,8 @@ def _show_login_screen():
             <div style="text-align:center;padding:2.5rem 2rem 2rem 2rem;
               background:#ffffff;border:1px solid #e2e8f0;border-radius:1.25rem;
               box-shadow:0 8px 32px rgba(0,184,159,0.10);">
-              <div style="font-size:2.2rem;font-weight:900;font-family:'Syne',sans-serif;
-                background:linear-gradient(135deg,{MEDPORT_TEAL},{MEDPORT_BLUE});
-                -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-                background-clip:text;margin-bottom:0.3rem;">
+              <div style="font-size:2.2rem;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;
+                color:#0F172A;letter-spacing:-0.02em;margin-bottom:0.3rem;">
                 MedPort
               </div>
               <div style="font-size:0.9rem;color:#64748b;margin-bottom:2rem;font-weight:500;">

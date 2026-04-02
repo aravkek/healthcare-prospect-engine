@@ -80,12 +80,12 @@ TASK_STATUS_COLORS = {
 def page_header(title: str, subtitle: str = "") -> str:
     """Returns HTML for a consistent page header — dark, heavy weight, no gradient text."""
     subtitle_html = (
-        f'<div style="color:#475569;font-size:0.9rem;margin-top:0.25rem;font-weight:400;">{subtitle}</div>'
+        f'<div class="page-subtitle">{subtitle}</div>'
         if subtitle else ""
     )
     return f"""
 <div style="margin-bottom:1.5rem;">
-  <div style="font-size:1.9rem;font-weight:800;line-height:1.15;color:{MEDPORT_DARK};font-family:'Syne',sans-serif;">{title}</div>
+  <div class="page-title">{title}</div>
   {subtitle_html}
 </div>
 """
@@ -94,7 +94,7 @@ def page_header(title: str, subtitle: str = "") -> str:
 def get_css() -> str:
     return f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Syne:wght@700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap');
 
 /* ── Type scale ──────────────────────────────────────
    xs   : 0.75rem  → labels, badges, tiny metadata
@@ -110,7 +110,7 @@ def get_css() -> str:
 html, body {{ font-size: 16px; }}
 html, body, [class*="css"] {{ font-family: 'DM Sans', system-ui, sans-serif; }}
 p, li, span, div {{ line-height: 1.55; }}
-h1, h2, h3 {{ font-family: 'Syne', 'DM Sans', sans-serif; font-weight: 800; color: {MEDPORT_DARK}; line-height: 1.2; }}
+h1, h2, h3 {{ font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif; font-weight: 700; color: {MEDPORT_DARK}; line-height: 1.2; }}
 .main .block-container {{ padding-top: 1.75rem; padding-bottom: 2.5rem; max-width: 1200px; }}
 .main {{ background: #f8fafc; }}
 
@@ -126,9 +126,9 @@ label[data-testid="stWidgetLabel"] > div > p {{ font-size: 0.875rem !important; 
 
 /* ── Sidebar — dark theme ── */
 section[data-testid="stSidebar"] {{
-  background: {MEDPORT_DARK};
+  background: #0F172A;
   color: white;
-  border-right: 1px solid #1e293b;
+  border-right: 1px solid rgba(255,255,255,0.06);
 }}
 section[data-testid="stSidebar"] * {{ color: white; }}
 section[data-testid="stSidebar"] .stMarkdown p,
@@ -148,7 +148,8 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a {{
   color: #94a3b8;
   border-radius: 8px;
   padding: 7px 10px;
-  font-size: 0.9375rem;
+  font-size: 0.9rem;
+  font-weight: 500;
   transition: all 0.2s;
 }}
 section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {{
@@ -197,6 +198,22 @@ section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"]:hover {{
   background: rgba(0,184,159,0.1);
 }}
 
+/* ── Page headers — clean, no gradient ── */
+.page-title {{
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #0F172A;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.35rem;
+  line-height: 1.2;
+}}
+.page-subtitle {{
+  font-size: 0.9375rem;
+  color: #64748b;
+  font-weight: 400;
+}}
+
 /* ── Hide Streamlit chrome (GitHub link, deploy button, footer) ── */
 #MainMenu {{ visibility: hidden; }}
 footer {{ visibility: hidden; }}
@@ -212,32 +229,32 @@ footer {{ visibility: hidden; }}
   display: inline-block;
 }}
 
-/* ── Stat cards — Linear aesthetic ── */
+/* ── Stat cards — Wealthsimple style ── */
 .stat-card {{
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 1.25rem 1.5rem;
-  text-align: center;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  border-radius: 16px;
+  padding: 1.5rem 1.75rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02);
   transition: box-shadow 0.2s ease;
 }}
 .stat-card:hover {{
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02);
 }}
 .stat-card .stat-value {{
-  font-size: 2.25rem;
-  font-weight: 800;
+  font-size: 2.5rem;
+  font-weight: 700;
   line-height: 1.1;
-  color: {MEDPORT_DARK};
-  font-family: 'Syne', sans-serif;
+  color: #0F172A;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: -0.02em;
 }}
 .stat-card .stat-label {{
   font-size: 0.75rem;
-  color: #64748b;
+  color: #94a3b8;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
-  margin-top: 0.4rem;
+  letter-spacing: 0.08em;
+  margin-top: 0.5rem;
   font-weight: 600;
 }}
 
@@ -248,7 +265,7 @@ footer {{ visibility: hidden; }}
   text-align: center; font-size: 0.8125rem; font-weight: 600; color: #fff;
   position: relative;
 }}
-.funnel-step .funnel-count {{ font-size: 1.625rem; font-weight: 800; display: block; line-height: 1; font-family: 'Syne', sans-serif; }}
+.funnel-step .funnel-count {{ font-size: 1.625rem; font-weight: 700; display: block; line-height: 1; font-family: 'Plus Jakarta Sans', sans-serif; }}
 .funnel-step .funnel-label {{ font-size: 0.75rem; opacity: 0.9; margin-top: 4px; display: block; }}
 .funnel-step:not(:last-child)::after {{
   content: '›'; position: absolute; right: -6px; top: 50%; transform: translateY(-50%);
@@ -269,9 +286,9 @@ footer {{ visibility: hidden; }}
   border-radius: 12px;
   padding: 1rem 1.25rem;
   margin-bottom: 0.75rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }}
-.goal-title {{ font-size: 1rem; font-weight: 700; color: {MEDPORT_DARK}; font-family: 'Syne', sans-serif; }}
+.goal-title {{ font-size: 1rem; font-weight: 700; color: {MEDPORT_DARK}; font-family: 'Plus Jakarta Sans', sans-serif; }}
 .goal-meta {{ font-size: 0.8125rem; color: #64748b; margin-top: 4px; }}
 .goal-progress-outer {{
   width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px;
@@ -287,12 +304,12 @@ footer {{ visibility: hidden; }}
 /* ── Activity feed ── */
 .activity-item {{
   display: flex; align-items: flex-start; gap: 0.75rem;
-  padding: 0.7rem 1rem; border-radius: 8px;
+  padding: 0.75rem 1rem; border-radius: 12px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-left: 3px solid transparent;
   margin-bottom: 0.4rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
   transition: border-left-color 0.15s ease;
 }}
 .activity-item:hover {{
@@ -320,10 +337,10 @@ footer {{ visibility: hidden; }}
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-left: 3px solid {MEDPORT_TEAL};
-  border-radius: 8px;
-  padding: 0.875rem 1.1rem;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
   margin-bottom: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
   transition: box-shadow 0.2s;
 }}
 .task-card:hover {{
@@ -358,46 +375,48 @@ footer {{ visibility: hidden; }}
 .standing-review {{ background: #fef2f2; color: #991b1b; padding: 3px 11px; border-radius: 999px; font-size: 0.8125rem; font-weight: 600; }}
 .standing-removed {{ background: #991b1b; color: #fff; padding: 3px 11px; border-radius: 999px; font-size: 0.8125rem; font-weight: 600; }}
 
-/* ── Member card — minimal row layout ── */
+/* ── Member card — vertical, centered (for narrow columns) ── */
 .member-card {{
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 1rem 1.25rem;
+  border-radius: 16px;
+  padding: 1.25rem 1rem;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  text-align: center;
+  gap: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
   transition: box-shadow 0.2s ease;
 }}
 .member-card:hover {{
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }}
 .member-avatar {{
-  width: 42px; height: 42px; border-radius: 50%;
-  background: {MEDPORT_DARK};
-  color: #fff; font-size: 0.875rem; font-weight: 700;
+  width: 48px; height: 48px; border-radius: 50%;
+  font-size: 1rem; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }}
-.member-name {{ font-size: 0.9375rem; font-weight: 700; color: {MEDPORT_DARK}; font-family: 'Syne', sans-serif; }}
-.member-role {{ font-size: 0.8125rem; color: #64748b; font-weight: 500; margin-top: 2px; }}
+.member-name {{ font-size: 0.9375rem; font-weight: 700; color: #0F172A; font-family: 'Plus Jakarta Sans', sans-serif; }}
+.member-role {{ font-size: 0.8125rem; color: #64748b; font-weight: 500; }}
 .member-stat {{ font-size: 0.75rem; color: #94a3b8; margin-top: 3px; }}
 
-/* ── Primary buttons — gradient accent ── */
+/* ── Primary buttons — clean dark ── */
 .stButton > button[kind="primary"] {{
-  background: linear-gradient(135deg, {MEDPORT_TEAL}, {MEDPORT_BLUE});
+  background: #0F172A;
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 0.45rem 1.4rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  transition: box-shadow 0.2s ease, opacity 0.2s ease;
+  border-radius: 10px;
+  padding: 0.5rem 1.5rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  letter-spacing: -0.01em;
+  transition: all 0.15s ease;
 }}
 .stButton > button[kind="primary"]:hover {{
-  box-shadow: 0 4px 16px rgba(0,184,159,0.35);
-  opacity: 0.92;
+  background: #1e293b;
+  box-shadow: 0 4px 12px rgba(15,23,42,0.2);
 }}
 
 /* ── Prospect card helpers ── */
@@ -407,7 +426,7 @@ footer {{ visibility: hidden; }}
   padding: 2px 9px; border-radius: 6px;
   font-size: 0.8125rem; font-weight: 600; display: inline-block;
 }}
-.inst-header {{ font-size: 1.0625rem; font-weight: 700; color: {MEDPORT_DARK}; font-family: 'Syne', sans-serif; }}
+.inst-header {{ font-size: 1.0625rem; font-weight: 700; color: {MEDPORT_DARK}; font-family: 'Plus Jakarta Sans', sans-serif; }}
 .inst-meta {{ font-size: 0.8125rem; color: #64748b; margin-top: 0.2rem; }}
 .score-green  {{ background:#f0fdf9; color:#065f46; padding:2px 9px; border-radius:6px; font-weight:600; font-size:0.8125rem; }}
 .score-yellow {{ background:#fffbeb; color:#92400e; padding:2px 9px; border-radius:6px; font-weight:600; font-size:0.8125rem; }}
@@ -507,7 +526,7 @@ hr.subtle {{ border: none; border-top: 1px solid #e2e8f0; margin: 0.5rem 0; }}
   font-size: 1rem;
   font-weight: 700;
   color: {MEDPORT_DARK};
-  font-family: 'Syne', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }}
 .intel-card-sub {{
   font-size: 0.8125rem;

@@ -43,16 +43,12 @@ with st.sidebar:
 
 # ─── Page header ─────────────────────────────────────────────────────────────
 
+_settings_subtitle = "Admin controls — add, edit, and remove team members" if admin else "Team directory — contact Arav to make changes"
 st.markdown(
     f"""
     <div style="margin-bottom:1.5rem;">
-      <div style="font-size:1.9rem;font-weight:800;line-height:1.15;
-        background:linear-gradient(135deg,{MEDPORT_TEAL},{MEDPORT_BLUE});
-        -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-        background-clip:text;font-family:'Syne',sans-serif;">Team Settings</div>
-      <div style="color:#475569;font-size:0.9rem;margin-top:0.2rem;">
-        {"Admin controls — add, edit, and remove team members" if admin else "Team directory — contact Arav to make changes"}
-      </div>
+      <div class="page-title">Team Settings</div>
+      <div class="page-subtitle">{_settings_subtitle}</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -79,23 +75,24 @@ else:
                 member_email = member.get("email", "") or ""
                 avatar_color = member.get("avatar_color", MEDPORT_TEAL)
                 initials = "".join(w[0].upper() for w in member_name.split()[:2])
+                email_html = f"<div style='font-size:0.75rem;color:#94a3b8;margin-top:2px;'>{member_email}</div>" if member_email else ""
 
                 st.markdown(
                     f"""
                     <div style="background:#fff;border:1px solid #e2e8f0;border-radius:1rem;
-                      padding:1rem 1.1rem;box-shadow:0 1px 4px rgba(0,0,0,0.05);margin-bottom:0.5rem;">
+                      padding:1rem 1.1rem;box-shadow:0 1px 2px rgba(0,0,0,0.04);margin-bottom:0.5rem;">
                       <div style="display:flex;align-items:center;gap:0.75rem;">
                         <div style="width:44px;height:44px;border-radius:50%;flex-shrink:0;
-                          background:linear-gradient(135deg,{avatar_color},{MEDPORT_BLUE});
+                          background:{avatar_color};
                           color:#fff;font-size:0.95rem;font-weight:700;
                           display:flex;align-items:center;justify-content:center;">
                           {initials}
                         </div>
                         <div>
-                          <div style="font-size:0.95rem;font-weight:700;color:{MEDPORT_DARK};
-                            font-family:'Syne',sans-serif;">{member_name}</div>
+                          <div style="font-size:0.95rem;font-weight:700;color:#0F172A;
+                            font-family:'Plus Jakarta Sans',sans-serif;">{member_name}</div>
                           <div style="font-size:0.78rem;color:#64748b;font-weight:500;">{member_role}</div>
-                          {"<div style='font-size:0.72rem;color:#94a3b8;margin-top:1px;'>" + member_email + "</div>" if member_email else ""}
+                          {email_html}
                         </div>
                       </div>
                     </div>

@@ -162,10 +162,8 @@ if auto_refresh:
 st.markdown(
     f"""
     <div style="display:flex;align-items:baseline;gap:0.6rem;margin-bottom:0.3rem;">
-      <span style="font-size:2.4rem;font-weight:900;
-        background:linear-gradient(135deg,{MEDPORT_TEAL},{MEDPORT_BLUE});
-        -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-        background-clip:text;font-family:'Syne',sans-serif;">MedPort</span>
+      <span style="font-size:2.4rem;font-weight:700;color:#0F172A;
+        font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:-0.02em;">MedPort</span>
       <span style="font-size:1rem;color:#64748b;font-weight:500;">Team Intelligence Hub</span>
     </div>
     <div style="font-size:1.1rem;color:#1e293b;margin-bottom:1.4rem;font-weight:500;">
