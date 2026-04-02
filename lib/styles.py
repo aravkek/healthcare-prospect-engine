@@ -216,9 +216,9 @@ section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"]:hover {{
 
 /* ── Hide Streamlit chrome ── */
 footer {{ visibility: hidden; }}
-[data-testid="stToolbar"] {{ display: none !important; }}
 [data-testid="stDecoration"] {{ display: none !important; }}
-header[data-testid="stHeader"] a[href*="github"] {{ display: none !important; }}
+/* Sidebar toggle must always be visible */
+[data-testid="stSidebarCollapsedControl"] {{ display: flex !important; opacity: 1 !important; }}
 
 /* ── Badge base class ── */
 .mp-badge {{

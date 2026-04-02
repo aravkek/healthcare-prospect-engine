@@ -11,10 +11,11 @@ If neither is configured the app passes through (local dev / no-auth deploy).
 import os
 import streamlit as st
 
-# Name → email map used so is_admin() works after password login
+# Email → display name overrides (so "aravkekane@gmail.com" shows as "Arav" not "Aravkekane")
 _NAME_EMAIL_MAP = {
-    "arav": "aravkekane@gmail.com",
-    "arav kekane": "aravkekane@gmail.com",
+    "aravkekane@gmail.com": "Arav",
+    "arav@medport.ca": "Arav",
+    "arav@medport.health": "Arav",
 }
 
 
@@ -210,22 +211,34 @@ def _show_password_login(team_password: str):
             unsafe_allow_html=True,
         )
 
-        name_input = st.text_input("Your name", placeholder="e.g. Arav",
-                                   key="_mp_name_input")
+        email_input = st.text_input("Email", placeholder="you@medport.ca",
+                                    key="_mp_email_input")
         pwd_input = st.text_input("Team password", type="password",
                                   key="_mp_pwd_input")
 
         if st.button("Sign in", type="primary", use_container_width=True,
                      key="_mp_signin"):
-            if not name_input.strip():
-                st.error("Enter your name.")
+            if not email_input.strip():
+                st.error("Enter your email.")
             elif pwd_input != team_password:
                 st.error("Wrong password. Ask Arav for the team password.")
             else:
-                name = name_input.strip()
-                email = _NAME_EMAIL_MAP.get(name.lower(),
-                    f"{name.lower().replace(' ', '.')}@medport.ca")
+                # Check allowed emails if configured
+                allowed_raw = _secret("ALLOWED_EMAILS", "")
+                email_lower = email_input.strip().lower()
+                if allowed_raw:
+                    allowed = {e.strip().lower() for e in allowed_raw.split(",") if e.strip()}
+                    if email_lower not in allowed:
+                        st.error("That email isn't on the MedPort team list. Contact Arav.")
+                        return
+                # Derive display name from email
+                name_part = email_lower.split("@")[0]
+                # Check hardcoded name map first
+                name = _NAME_EMAIL_MAP.get(email_lower, "")
+                if not name:
+                    # e.g. "arav.kekane" → "Arav Kekane"
+                    name = name_part.replace(".", " ").replace("_", " ").title()
                 st.session_state["_mp_authenticated"] = True
                 st.session_state["_mp_name"] = name
-                st.session_state["_mp_email"] = email
+                st.session_state["_mp_email"] = email_lower
                 st.rerun()
