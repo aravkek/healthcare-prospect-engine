@@ -15,7 +15,7 @@ from lib.styles import (
     inject_css, MEDPORT_BLUE, MEDPORT_GREEN, MEDPORT_TEAL, TEAM_MEMBERS,
     PRIORITY_COLORS, TASK_STATUS_COLORS,
 )
-from lib.auth import check_auth, is_admin
+from lib.auth import check_auth, is_admin, render_logout_button
 from lib.db import (
     load_prospects, get_tasks, create_task, update_task,
     get_goals, create_goal, update_goal, log_activity, get_team_members,
@@ -63,13 +63,7 @@ with st.sidebar:
     st.markdown(f"<div style='font-size:0.8rem;color:#94a3b8;'>{name}</div>", unsafe_allow_html=True)
     st.markdown("---")
 
-    try:
-        auth_configured = bool(st.secrets.get("auth", {}))
-    except Exception:
-        auth_configured = False
-    if auth_configured and os.environ.get("LOCAL_DEV", "false").lower() != "true":
-        if st.button("Sign out"):
-            st.logout()
+    render_logout_button()
 
     if st.button("Refresh data", use_container_width=True):
         st.cache_data.clear()

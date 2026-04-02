@@ -1,0 +1,46 @@
+DEEP DIVE: McMaster University Student Wellness Centre
+============================================================
+
+**Sales Intelligence Brief for MedPort**
+
+**1. BOOKING METHOD VERDICT**
+
+Based on the McMaster University Student Wellness Centre's website, it appears that patients primarily book appointments through phone calls. The "Book an Appointment" page is not available online, and the website directs users to call the centre for booking. This is evident from the "Get Help Now" section, which states "Connect Now" with a phone number, and the "Let's Chat" section, which also provides a phone number for counselling appointments. This suggests that phone calls are the primary method of booking appointments.
+
+**2. PHONE BURDEN ASSESSMENT**
+
+The admin phone problem at the McMaster University Student Wellness Centre appears to be significant, as the website mentions a "No Show and Cancellation Policy" that requires at least 12 hours' notice to cancel an appointment, and late cancellations or no-shows will result in a fee. This suggests that the centre is experiencing a high volume of phone calls and is taking steps to manage this burden. Additionally, the centre's website mentions "Rapid Access Counselling" with limited spots available, which implies that the centre is struggling to keep up with demand.
+
+**3. DECISION MAKER**
+
+The decision maker for the McMaster University Student Wellness Centre is likely the Director of the Student Wellness Centre, Dr. [Last Name], whose name is not publicly available. However, based on the centre's website, it appears that the Director is responsible for overseeing the centre's operations and services. As the Director, Dr. [Last Name] would be interested in solutions that improve the centre's efficiency, reduce phone burden, and enhance the patient experience.
+
+**4. COMPETITOR RISK**
+
+There is no evidence of existing AI phone tools or competitors at the McMaster University Student Wellness Centre. The centre's website does not mention any AI-powered phone systems, and there are no job postings or reviews that suggest the centre is using such technology.
+
+**5. WHY THEY'LL SAY YES**
+
+The McMaster University Student Wellness Centre will likely say yes to a student founder demo because of their commitment to innovation and student well-being. The centre's website mentions "Health Promotion" and "Wellness Programs" that aim to support students' physical and mental health. MedPort's AI-powered phone system aligns with these goals, and a demo would allow the centre to explore how MedPort can improve their operations and enhance the patient experience.
+
+**6. WHY THEY'LL SAY NO**
+
+The McMaster University Student Wellness Centre may say no to a student founder demo due to procurement bureaucracy or existing online booking systems. The centre's website does not mention any online booking systems, but it's possible that they have an existing system in place. Additionally, the centre's commitment to innovation may be outweighed by concerns about implementing a new technology.
+
+**OUTREACH EMAIL**
+
+Subject line: "Improving Student Well-being through Efficient Phone Systems"
+
+Dear Dr. [Last Name],
+
+I came across the McMaster University Student Wellness Centre's website and was impressed by your commitment to supporting students' physical and mental health. As a student founder at [University], I'm excited to introduce MedPort, an AI-powered phone system that can help your centre improve efficiency, reduce phone burden, and enhance the patient experience.
+
+Our system can answer patient phone calls 24/7, book appointments, capture intake, and export data to Google Sheets or EHR. We offer a free 30-day pilot, and I'd love to schedule a 15-minute Zoom call to demonstrate how MedPort can benefit your centre. Alternatively, I can send a 2-minute demo for you to review at your convenience.
+
+Please let me know if you're interested, and I'll be happy to set up a meeting.
+
+Best regards,
+
+Arav
+Student Founder at [University]
+MedPort

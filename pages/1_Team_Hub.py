@@ -13,7 +13,7 @@ import streamlit as st
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from lib.styles import inject_css, MEDPORT_BLUE, MEDPORT_GREEN, MEDPORT_TEAL, TASK_STATUS_COLORS
-from lib.auth import check_auth, is_admin
+from lib.auth import check_auth, is_admin, render_logout_button
 from lib.db import load_prospects, get_activity_feed, get_tasks, get_goals, get_team_members
 
 st.set_page_config(
@@ -100,14 +100,7 @@ with st.sidebar:
     st.markdown(f"<div style='font-size:0.8rem;color:#94a3b8;'>Signed in as <b>{name}</b></div>", unsafe_allow_html=True)
     st.markdown("---")
 
-    try:
-        auth_configured = bool(st.secrets.get("auth", {}))
-    except Exception:
-        auth_configured = False
-
-    if auth_configured and os.environ.get("LOCAL_DEV", "false").lower() != "true":
-        if st.button("Sign out"):
-            st.logout()
+    render_logout_button()
 
     auto_refresh = st.toggle("Auto-refresh (30s)", value=False, key="hub_refresh")
     if st.button("Refresh data", use_container_width=True):

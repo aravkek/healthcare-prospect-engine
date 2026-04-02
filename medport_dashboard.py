@@ -18,7 +18,7 @@ from lib.styles import (
     inject_css, MEDPORT_BLUE, MEDPORT_GREEN, MEDPORT_TEAL,
     MEDPORT_LIGHT_BLUE, MEDPORT_LIGHT_GREEN, MEDPORT_LIGHT_TEAL
 )
-from lib.auth import check_auth, is_admin
+from lib.auth import check_auth, is_admin, render_logout_button
 from lib.db import load_prospects, get_activity_feed, get_tasks, get_goals
 
 # ─── Page config — must be first Streamlit call ──────────────────────────────
@@ -136,14 +136,7 @@ with st.sidebar:
 
     st.markdown("---")
 
-    try:
-        auth_configured = bool(st.secrets.get("auth", {}))
-    except Exception:
-        auth_configured = False
-
-    if auth_configured and os.environ.get("LOCAL_DEV", "false").lower() != "true":
-        if st.button("Sign out", use_container_width=False):
-            st.logout()
+    render_logout_button()
 
     auto_refresh = st.toggle("Auto-refresh (30s)", value=False, key="home_refresh")
 

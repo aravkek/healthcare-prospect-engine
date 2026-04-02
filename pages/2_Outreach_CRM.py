@@ -19,7 +19,7 @@ from lib.styles import (
     inject_css, MEDPORT_BLUE, MEDPORT_GREEN, MEDPORT_TEAL, MEDPORT_LIGHT_BLUE,
     STATUS_ORDER, STATUS_LABELS, STATUS_COLORS, PIPELINE_STAGES, TEAM_MEMBERS,
 )
-from lib.auth import check_auth, is_admin
+from lib.auth import check_auth, is_admin, render_logout_button
 from lib.db import (
     load_prospects, update_prospect, log_activity,
     get_saved_searches, save_search, delete_saved_search, increment_search_use_count,
@@ -308,13 +308,7 @@ with st.sidebar:
     st.markdown(f"<div style='font-size:0.8rem;color:#94a3b8;'>{name}</div>", unsafe_allow_html=True)
     st.markdown("---")
 
-    try:
-        auth_configured = bool(st.secrets.get("auth", {}))
-    except Exception:
-        auth_configured = False
-    if auth_configured and os.environ.get("LOCAL_DEV", "false").lower() != "true":
-        if st.button("Sign out"):
-            st.logout()
+    render_logout_button()
 
     auto_refresh = st.toggle("Auto-refresh (30s)", value=False, key="crm_refresh")
 

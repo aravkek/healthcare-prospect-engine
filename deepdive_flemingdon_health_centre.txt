@@ -1,0 +1,49 @@
+DEEP DIVE: Flemingdon Health Centre
+============================================================
+
+**Sales Intelligence Brief for MedPort at Flemingdon Health Centre**
+
+**1. BOOKING METHOD VERDICT**
+
+Based on the Flemingdon Health Centre website, it appears that patients can book appointments online through their website. On the "Book an Appointment" page, it is stated that patients can "Book an appointment online" and that they will receive a confirmation email. This suggests that Flemingdon Health Centre has an online booking system in place, which may reduce the need for phone-based bookings. However, it is also possible that patients may still call the centre to book appointments, especially for urgent or same-day appointments.
+
+**2. PHONE BURDEN ASSESSMENT**
+
+There is no evidence of a significant phone burden at Flemingdon Health Centre. The website does not mention any issues with phone wait times or long queues, and there are no patient reviews or complaints about phone-related issues. However, the website does mention that patients can contact the centre by phone, email, or online form, which suggests that the centre may still receive a significant volume of phone calls.
+
+**3. DECISION MAKER**
+
+Based on the website, it appears that the decision maker for implementing new technology at Flemingdon Health Centre may be the Director of Clinical Services or the Manager of Operations. The website lists the contact information for these individuals, including their names and titles. It is likely that these individuals would be interested in learning more about MedPort's AI voice agent solution, as it could help to streamline patient bookings and reduce administrative burdens.
+
+**4. COMPETITOR RISK**
+
+There is no evidence of existing AI phone tools at Flemingdon Health Centre. The website does not mention any competitors or existing solutions for patient booking or phone management. However, it is worth noting that Nuance, a well-known provider of voice AI solutions, does have a presence in the Canadian healthcare market. However, there is no evidence to suggest that Flemingdon Health Centre is currently using Nuance's services.
+
+**5. WHY THEY'LL SAY YES**
+
+Flemingdon Health Centre may be interested in MedPort's AI voice agent solution because it could help to improve patient satisfaction and reduce administrative burdens. The centre's website emphasizes the importance of providing high-quality patient care, and MedPort's solution could help to achieve this goal by streamlining patient bookings and reducing phone wait times. Additionally, the centre's funding model is likely to prioritize cost-effective solutions that improve patient outcomes, making MedPort's solution an attractive option.
+
+**6. WHY THEY'LL SAY NO**
+
+Flemingdon Health Centre may say no to MedPort's solution if they have already invested in an online booking system and do not see the need for additional technology. Alternatively, they may be hesitant to adopt a new solution due to concerns about procurement bureaucracy or the potential for technical issues.
+
+**7. OUTREACH EMAIL**
+
+Subject line: "Improving Patient Satisfaction at Flemingdon Health Centre"
+
+Dear [Director of Clinical Services/Manager of Operations],
+
+I came across Flemingdon Health Centre while researching innovative healthcare solutions in Toronto. I was impressed by the centre's commitment to providing high-quality patient care and improving patient satisfaction. As a student founder at [University], I am excited to introduce MedPort's AI voice agent solution, which could help to streamline patient bookings and reduce administrative burdens.
+
+Our solution is designed to be easy to implement and requires no IT project. Patients can simply call the centre's phone number, and our AI voice agent will answer their questions, book appointments, and capture intake information. We also export data to Google Sheets or EHR, making it easy to integrate with existing systems.
+
+I would love to schedule a 15-minute Zoom call to discuss how MedPort's solution could benefit Flemingdon Health Centre. Alternatively, I can send a 2-minute demo to give you a better understanding of our technology.
+
+We also offer a free 30-day pilot, which would allow you to test our solution with minimal risk.
+
+Please let me know if you are interested in learning more.
+
+Best regards,
+
+Arav
+Student Founder, MedPort

@@ -19,7 +19,7 @@ from lib.styles import (
     inject_css, MEDPORT_BLUE, MEDPORT_TEAL, MEDPORT_DARK,
     MEDPORT_LIGHT_TEAL, STATUS_LABELS,
 )
-from lib.auth import check_auth, is_admin
+from lib.auth import check_auth, is_admin, render_logout_button
 from lib.db import load_prospects, get_tasks, create_task
 from lib.ai import call_ai, has_ai_configured, ai_provider_badge, MODEL
 
@@ -155,13 +155,7 @@ with st.sidebar:
     st.markdown(f"<div style='font-size:0.8rem;color:#94a3b8;'>{name}</div>", unsafe_allow_html=True)
     st.markdown("---")
 
-    try:
-        auth_configured = bool(st.secrets.get("auth", {}))
-    except Exception:
-        auth_configured = False
-    if auth_configured and os.environ.get("LOCAL_DEV", "false").lower() != "true":
-        if st.button("Sign out"):
-            st.logout()
+    render_logout_button()
 
     st.markdown("---")
     provider = ai_provider_badge()
