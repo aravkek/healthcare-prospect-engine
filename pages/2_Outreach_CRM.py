@@ -117,8 +117,11 @@ def render_institution_card(row: pd.Series, queue_mode: bool = False, key_prefix
     phone = row.get("phone", "")
     dm_name = row.get("decision_maker_name", "")
     dm_title = row.get("decision_maker_title", "")
-    dm_linkedin = row.get("decision_maker_linkedin", "")
-    outreach = row.get("outreach_angle", "")
+    dm_email = row.get("decision_maker_email", "") or ""
+    dm_phone = row.get("decision_maker_phone", "") or ""
+    dm_linkedin = row.get("decision_maker_linkedin", "") or ""
+    dm_research = row.get("dm_research", "") or ""
+    # outreach_angle is old scraped data — we never display it raw
     notes = row.get("research_notes", "")
     risk = row.get("competitor_risk", "none")
     rank = row.get("priority_rank", 3)
@@ -234,19 +237,68 @@ def render_institution_card(row: pd.Series, queue_mode: bool = False, key_prefix
 
         st.markdown("")
 
-        dm_parts = []
-        if dm_name:
-            dm_parts.append(f"**{dm_name}**")
-        if dm_title:
-            dm_parts.append(dm_title)
-        if dm_parts:
-            st.markdown("**Decision maker:** " + " — ".join(dm_parts))
-        if dm_linkedin:
-            st.markdown(f"**LinkedIn search:** `{dm_linkedin}`")
+        # ── Decision Maker section ──────────────────────────────────────────
+        st.markdown(
+            '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;'
+            'padding:0.75rem 1rem;margin:0.5rem 0;">',
+            unsafe_allow_html=True,
+        )
+        st.markdown("**Contact Person**")
 
-        if outreach:
-            st.markdown("**Outreach angle** (click to copy):")
-            st.code(outreach, language=None)
+        if dm_name or dm_title:
+            _dm_header = f"**{dm_name}**" if dm_name else ""
+            _dm_sub = f" &nbsp;·&nbsp; {dm_title}" if dm_title else ""
+            st.markdown(
+                f'<div style="font-size:0.95rem;color:#0F172A;">{_dm_header}'
+                f'<span style="font-weight:400;color:#64748b;">{_dm_sub}</span></div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.caption("No contact identified yet — add one in Full Profile")
+
+        # Contact details row
+        _contact_parts = []
+        if dm_email:
+            _contact_parts.append(f'📧 <a href="mailto:{dm_email}" style="color:{MEDPORT_TEAL};font-weight:600;">{dm_email}</a>')
+        if dm_phone:
+            _contact_parts.append(f'📞 <span style="color:#475569;">{dm_phone}</span>')
+        if dm_linkedin:
+            _contact_parts.append(f'🔗 <a href="https://www.linkedin.com/search/results/all/?keywords={dm_linkedin}" target="_blank" style="color:{MEDPORT_BLUE};">LinkedIn</a>')
+        if _contact_parts:
+            st.markdown(
+                '<div style="font-size:0.82rem;margin-top:0.3rem;">' +
+                " &nbsp;&nbsp; ".join(_contact_parts) + "</div>",
+                unsafe_allow_html=True,
+            )
+        elif dm_name:
+            st.caption("Add their email and phone in Full Profile →")
+
+        # DM personality brief (from AI research)
+        if dm_research:
+            # Extract just the key approach sections — first 600 chars or up to a section break
+            _brief = dm_research[:700].strip()
+            # Try to find the approach/hooks section
+            for _marker in ["HOW TO REACH", "HOW TO WRITE", "WHAT RESONATES", "PERSONALIZATION HOOKS", "SUGGESTED EMAIL OPENER"]:
+                _idx = dm_research.upper().find(_marker)
+                if _idx != -1:
+                    _brief = dm_research[_idx:_idx + 600].strip()
+                    break
+            st.markdown(
+                f'<div style="margin-top:0.5rem;padding:0.5rem 0.75rem;background:#fff;'
+                f'border-left:3px solid {MEDPORT_TEAL};border-radius:0 6px 6px 0;'
+                f'font-size:0.8rem;color:#334155;white-space:pre-wrap;max-height:120px;overflow-y:auto;">'
+                f'{_brief}</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                f'<div style="margin-top:0.4rem;font-size:0.8rem;color:#94a3b8;">'
+                f'No personality brief yet — click <b>Full Profile →</b> then run <b>Decision Maker Research</b> '
+                f'to get a bio, communication style, and best approach for this person.</div>',
+                unsafe_allow_html=True,
+            )
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
         if notes:
             with st.expander("Research notes", expanded=False):
