@@ -3,6 +3,8 @@ MedPort database layer — all Supabase operations.
 All functions fail gracefully and log warnings rather than crashing pages.
 """
 
+from __future__ import annotations
+
 import os
 import time
 from datetime import datetime, timezone
