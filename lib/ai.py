@@ -279,91 +279,117 @@ These should be things that show we did our homework — not generic claims."""
 
 def research_decision_maker(prospect: dict, institution_research: str = "") -> str:
     """
-    Generate a hyper-specific decision maker profile.
-    If institution_research is provided, the DM profile is contextualized to it.
+    Generate a hyper-specific decision maker profile including personality,
+    ideology, communication style, and language that resonates with them.
     """
     prospect_ctx = _build_prospect_context(prospect)
     dm_name = prospect.get("decision_maker_name", "")
     dm_title = prospect.get("decision_maker_title", "")
+    dm_linkedin = prospect.get("decision_maker_linkedin", "")
     inst_name = prospect.get("name", "")
     inst_type = prospect.get("inst_type", "clinic")
     city = prospect.get("city", "")
     emr = prospect.get("emr_system", "")
 
-    system = f"""You are a B2B sales intelligence analyst specializing in Canadian healthcare.
+    system = f"""You are a relationship intelligence analyst who helps B2B sales teams connect authentically.
 {_MEDPORT_CONTEXT}
 
-Your job: build a decision maker profile that helps our team write a cold email so personalized
-it feels impossible to ignore. Every insight must be actionable — not theoretical."""
+Your goal: build a profile so detailed that our team can write one email to this specific person
+and have them feel like we genuinely understand their world — not just their job title.
+Focus on personality, ideology, and what makes this person tick professionally and personally."""
 
     if not dm_name or dm_name.lower() in ("unknown", "not identified"):
-        user_msg = f"""We don't have a named decision maker yet for this institution.
+        user_msg = f"""We don't have a named decision maker yet. Build a profile of the TYPICAL person
+who holds this role at this type of institution.
 
 {prospect_ctx}
 
-INSTITUTION RESEARCH BRIEF:
+INSTITUTION RESEARCH:
 {institution_research or "Not yet available"}
 
-Build a profile of the TYPICAL decision maker for a {inst_type} like {inst_name} in {city}, Canada:
-
 **MOST LIKELY DECISION MAKER**
-What is their most common title at a {inst_type}? (e.g., Practice Manager, Medical Director, Executive Director, Clinic Owner, etc.)
-Why is this person the one who buys — not the doctors?
+Who specifically at a {inst_type} like {inst_name} in {city} decides to adopt a new patient intake tool?
+Give their most common title and why it's them (not the doctors, not the board).
 
-**WHAT DRIVES THEM PROFESSIONALLY**
-What are they measured on? What keeps them up at night?
-What does "a good year" look like for someone in this role at a {inst_type} using {emr or "their EMR"}?
+**PERSONALITY ARCHETYPE**
+What type of professional tends to be in this role at a {inst_type}?
+Are they typically data-driven operators? Relationship-first community builders?
+Academically-oriented administrators? Process-improvement enthusiasts?
+What does their LinkedIn likely look like — are they active, passive, credentialed?
 
-**HOW THEY EVALUATE NEW VENDORS**
-How does a {inst_type} administrator typically discover and evaluate new tools?
-What proof points matter most to them? (Peer references, ROI numbers, ease of setup, compliance, etc.)
+**THEIR PROFESSIONAL IDEOLOGY**
+What do they fundamentally believe about healthcare administration?
+What is their mental model for evaluating new tools?
+Do they think in terms of patient outcomes, operational efficiency, staff wellbeing, or compliance?
+What language do they use internally when making decisions?
 
-**COLD EMAIL PSYCHOLOGY**
-- What subject line makes them click?
-- What first sentence makes them keep reading?
-- What first paragraph makes them reply?
-- What would make them delete this in 3 seconds?
+**WHAT RESONATES VS. WHAT REPELS**
+Language that makes them lean in:
+- e.g., "reduces time your team spends on admin", "patients arrive already pre-registered"
+Language that makes them tune out:
+- e.g., "AI-powered", "disruptive", "seamless solution", "game-changer"
 
-**3 PERSONALIZATION HOOKS FOR {inst_name.upper()}**
-Based on everything we know about this specific institution — 3 things we can reference in
-our outreach to show we know their world, not just clinics in general."""
+**COLD EMAIL PSYCHOLOGY FOR THIS ROLE**
+- Best email tone: formal/collegial/peer-to-peer? Why?
+- Subject line that earns a click from this person specifically
+- Opening sentence that makes them keep reading (NOT an observation about their website)
+- The instinctive objection they'll have in 10 seconds — and how to pre-empt it warmly
+
+**5 PERSONALIZATION HOOKS FOR {inst_name.upper()}**
+5 specific, natural things to reference in outreach that show we know their world.
+These should feel like something a thoughtful colleague would say — not a sales pitch."""
 
     else:
-        user_msg = f"""Build a detailed intelligence profile for this specific decision maker.
+        first = dm_name.split()[0]
+        user_msg = f"""Build a deep intelligence and personality profile for this specific decision maker.
 
 {prospect_ctx}
 
-INSTITUTION RESEARCH BRIEF:
-{institution_research or "Not yet available — use the prospect data above to infer context"}
+INSTITUTION RESEARCH:
+{institution_research or "Not yet available — infer from role, institution type, and city"}
 
 **WHO {dm_name.upper()} IS**
-Based on their title ({dm_title}) at {inst_name} ({inst_type}, {city}):
-- What is their likely background and career path?
-- How long do people in this role typically stay?
-- What does their day-to-day actually look like?
-- What decisions are they empowered to make vs. what requires a physician or board sign-off?
+Title: {dm_title} at {inst_name} ({inst_type}, {city})
+LinkedIn: {dm_linkedin or "not available"}
 
-**WHAT {dm_name.split()[0].upper()} CARES ABOUT**
-As a {dm_title} at a {inst_type}:
-- Top 3 professional priorities (be specific to role and institution type)
-- What success looks like for them in the next 12 months
-- What they're probably frustrated about right now
+Based on everything above:
+- What is their likely background and career path to this role?
+- What kind of institution is {inst_name} — prestigious research institution, community-focused,
+  efficiency-driven, student/patient welfare oriented?
+- What does {first}'s day actually look like? What decisions land on their desk vs. someone else's?
+- What are they empowered to decide alone vs. what needs a committee?
 
-**HOW TO REACH {dm_name.split()[0].upper()}**
-- Email tone: formal/peer-to-peer/clinical? Why?
-- Subject line that works for this specific person's role and institution
-- First sentence that makes a {dm_title} keep reading
-- The objection they will raise in the first 10 seconds — and how to pre-empt it
+**{first.upper()}'S PERSONALITY AND PROFESSIONAL IDEOLOGY**
+This is the most important section. Think carefully:
+- Are they a data person or a relationships person? How do you know?
+- What leadership style does a {dm_title} at this type of institution typically exhibit?
+- What do they fundamentally believe about their institution's role in healthcare?
+- What is their decision-making framework? (ROI-first? Risk-averse? Innovation-curious?)
+- How do they talk about their work publicly vs. internally?
+- If they've been in this role a while, what that says about their priorities.
 
-**PERSONALIZATION HOOKS — USE THESE IN EMAILS**
-5 specific details to reference about {inst_name} / {dm_name} that show deep research.
-Make these concrete and usable as natural email sentences.
+**WHAT {first.upper()} RESPONDS TO — AND WHAT TURNS THEM OFF**
+Language that resonates with someone in {first}'s position at a {inst_type}:
+- Specific phrases, framings, and proof types that land with this profile
+Language that immediately signals "sales pitch" and gets ignored:
+- What to never say to a {dm_title}
 
-**SUGGESTED EMAIL OPENER**
-Write the ideal opening 2 sentences of a cold email to {dm_name.split()[0]} specifically.
-It should feel like it was written by someone who spent 30 minutes on their website and LinkedIn."""
+**HOW TO WRITE TO {first.upper()} SPECIFICALLY**
+- Email tone: formal, collegial, or peer-to-peer? Give the reason.
+- What subject line earns a click from {first} (not generic curiosity — earned attention)
+- The ideal first sentence — NOT starting with "I noticed" or "I came across"
+  Instead: an insight about their world, a peer observation, a question that assumes competence
+- The objection {first} will have in 10 seconds — and the one-sentence pre-emption
 
-    text, _ = call_ai(system, [{"role": "user", "content": user_msg}], max_tokens=1500)
+**5 PERSONALIZATION HOOKS FOR THIS EMAIL**
+5 specific details about {inst_name} or {dm_name}'s role that we can weave naturally into one email.
+Each hook should be a complete sentence we could use almost verbatim.
+
+**SUGGESTED EMAIL OPENER (2 sentences)**
+Write the ideal first 2 sentences to {first} — as if from a fellow founder who deeply respects their work.
+It should open with their world, not ours. No "I noticed", no "I came across", no compliments."""
+
+    text, _ = call_ai(system, [{"role": "user", "content": user_msg}], max_tokens=1800)
     return text
 
 
@@ -461,31 +487,54 @@ def draft_outreach_email(
         facts_block += f"\nFIT ANALYSIS (use the winning strategy section):\n{fit_analysis}\n"
 
     variant_instructions = {
-        1: f"""VARIANT 1 — DIRECT VALUE PROP:
-Lead with a specific, quantified benefit tied directly to their situation.
-Reference their EMR ({emr or "their current system"}) and our integration with it by name.
-If we know their patient volume ({patient_vol or "unknown"}), reference what 40% time savings means concretely.
-Example of BAD opening: "We help clinics reduce administrative burden."
-Example of GOOD opening: "OSCAR-based family clinics in Ontario are cutting check-in time from 14 minutes to under 2 — without changing anything in their workflow."
-Make the math real for a clinic their size.""",
+        1: f"""VARIANT 1 — PEER INSIGHT + VALUE:
+Open with a genuine insight about the world {dm_title or "this person"} operates in — something that shows
+you understand their context deeply. Then connect it to a specific, quantified outcome MedPort delivers.
+Reference their EMR ({emr or "their system"}) by name and what integration actually means for their workflow.
 
-        2: f"""VARIANT 2 — PROBLEM-FIRST:
-Open by describing the exact scene at {inst_name} on a busy Monday morning — before mentioning us.
-What is the front desk doing? What are patients doing? What's the friction?
-Make the {dm_title or "practice manager"} feel understood before you offer anything.
-Then position MedPort as the obvious answer to the problem you just described.
-Example of BAD opening: "I know you're busy, so I'll be brief."
-Example of GOOD opening: "Every Monday at a walk-in like yours, the first 40 patients fill out the same form they filled out at their GP last week — and your front desk re-enters it anyway."
-Reference the phone intake evidence if available: {phone_evidence or "not available"}.""",
+NEVER start with: "I noticed", "I came across", "I hope this finds you", "I wanted to reach out"
+INSTEAD open with: An observation about their world, a trend in their institution type, or a peer insight.
 
-        3: f"""VARIANT 3 — RESEARCH HOOK:
-Open with one specific thing we know about {inst_name} that shows we did our homework.
-This should be something about their institution, their EMR, their city/region, or their type of practice.
-NOT a compliment — a relevant observation that creates context for why you're emailing.
-Then connect that observation directly to the problem MedPort solves.
-Example of BAD opening: "I came across your clinic online and was impressed."
-Example of GOOD opening: "Jane App clinics in {city or "your city"} are increasingly competing on patient experience — and most are still handing out paper clipboards at the front desk."
-Use the personalization hooks from the DM research. Reference the outreach angle if available: {outreach_angle or "not recorded"}.""",
+Example of BAD: "We help clinics reduce administrative burden with our AI solution."
+Example of GOOD: "Family medicine clinics running OSCAR across Ontario are averaging 12 minutes of front-desk
+intake work per patient — before the appointment even starts. For a 30-patient day, that's 6 hours of staff
+time spent on paper."
+Then explain: MedPort sends patients a link before their appointment — they arrive pre-registered, data flows
+straight into {emr or "their EMR"}, front desk goes from gatekeeping forms to actually helping patients.
+Make the numbers real for their scale ({patient_vol or "their volume"}).""",
+
+        2: f"""VARIANT 2 — THEIR WORLD FIRST:
+Open by painting a picture of a regular day at {inst_name} — from the perspective of someone who deeply
+understands how {inst_type} institutions operate. Make {dm_title or "the reader"} feel seen before
+you ever mention MedPort.
+The first sentence should describe their reality, not our product.
+The second sentence should name the friction. The third should offer the solution.
+
+NEVER: comment on their website, point out what they're "still" doing, or imply they're behind.
+INSTEAD: describe their world with empathy and precision, then offer a better version of it.
+
+Example of BAD: "I noticed your website still uses paper intake forms."
+Example of GOOD: "Running a {inst_type} means your team is managing patient arrivals,
+re-entering data they've already collected, and handling the front desk rush — all before anyone
+has actually seen a provider."
+Reference phone intake evidence if available: {phone_evidence or "n/a"}
+Use their specific institution dynamics from the research brief.""",
+
+        3: f"""VARIANT 3 — PERSONALITY-MATCHED:
+This email is written specifically for {dm_name or "this person"}'s personality, communication style,
+and professional ideology as profiled in the DM research.
+Use the language they respond to. Match their formality level. Lead with what they care about most.
+
+If the DM research shows they're data-driven: lead with a number.
+If they're relationship-first: lead with a shared challenge other institutions like theirs have solved.
+If they're academically oriented: lead with a trend or study relevant to their institution type.
+If they're operations-focused: lead with process efficiency and time savings.
+
+Pull directly from the DM research personalization hooks.
+The email should feel like it was written by someone who read their LinkedIn, their institution's annual
+report, and talked to three of their peers — and is now writing as a collegial peer, not a vendor.
+
+Outreach angle from our notes: {outreach_angle or "not recorded — infer from DM personality research"}""",
     }.get(variant, "")
 
     system = f"""You write cold outreach emails for a Canadian healthcare startup's sales team.
@@ -493,12 +542,21 @@ Use the personalization hooks from the DM research. Reference the outreach angle
 
 STRICT EMAIL RULES — violating any of these makes the email unusable:
 1. Body: exactly 4-5 sentences. No more.
-2. NEVER use: "I hope this finds you well", "touching base", "just checking in", "reaching out", "synergy", "innovative solution", "game-changer", "streamline"
-3. Every sentence must contain a specific fact about {inst_name}, {emr or "their EMR"}, {city or "their city"}, or the decision maker's role. No generic filler sentences.
-4. CTA: one specific 15-minute ask. "Would you have 15 minutes next week to see how it'd work with your {emr or "setup"}?" is good. "Let me know if you're interested" is bad.
-5. Subject line: under 55 characters, specific to this institution, no clickbait, no questions
-6. Tone: peer-to-peer, confident, not salesy. You are a fellow Canadian founder who understands their world.
-7. Signature: {sender_name} / {sender_title} / MedPort"""
+2. BANNED phrases — never appear in the output:
+   "I hope this finds you well" / "touching base" / "just checking in" / "reaching out" /
+   "synergy" / "innovative solution" / "game-changer" / "streamline" /
+   "I noticed your" / "I came across your" / "I wanted to reach out" / "I saw that you" /
+   "still using" / "still doing" / "you're still" — these are condescending or cliché.
+3. NEVER point out something the institution is doing wrong or "still" doing.
+   INSTEAD: describe their world accurately and warmly, then offer a better version of it.
+4. Every sentence must be grounded in a specific fact about this institution, their EMR, their
+   city, their institution type, or the DM's role and personality. No generic filler.
+5. CTA: one specific, low-friction ask — e.g., "Would you be open to a 15-minute call to see
+   how it integrates with {emr or 'your setup'}?" Not "Let me know if you're interested."
+6. Subject: under 55 chars, earns attention through specificity — no tricks, no questions.
+7. Tone: collegial founder-to-peer. You deeply respect their work and understand their world.
+   You're sharing something genuinely useful — not pitching, not selling.
+8. Signature: {sender_name} / {sender_title} / MedPort"""
 
     user_msg = f"""Write a cold outreach email to this specific prospect.
 

@@ -600,8 +600,30 @@ if uncontacted_a > 0:
 
 # ─── Tabs ────────────────────────────────────────────────────────────────────
 
-tab_queue, tab_a, tab_b, tab_c, tab_us, tab_pipeline = st.tabs([
-    f"Queue ({uncontacted_a})", "Tier A", "Tier B", "Tier C", "US Market", "Pipeline View"
+# ── Quick-filter presets ──────────────────────────────────────────────────────
+st.markdown("**Quick filters:**")
+qf_cols = st.columns(8)
+_PRESETS = [
+    ("🇨🇦 Tier A", {"crm_country": "CA", "crm_tiers": ["A"]}),
+    ("🇺🇸 Tier A", {"crm_country": "US", "crm_tiers": ["A"]}),
+    ("🇨🇦 Tier B", {"crm_country": "CA", "crm_tiers": ["B"]}),
+    ("🇺🇸 Tier B", {"crm_country": "US", "crm_tiers": ["B"]}),
+    ("📬 Follow-up", {"crm_followup_due": True}),
+    ("🔬 Needs Research", {"crm_needs_research": True}),
+    ("📅 Demo Stage", {"crm_statuses": ["demo_booked"]}),
+    ("🔄 Reset", {"crm_country": "Both", "crm_tiers": ["A", "B", "C"], "crm_statuses": STATUS_ORDER, "crm_my_only": False, "crm_needs_research": False, "crm_followup_due": False}),
+]
+for _pi, (_plabel, _pstate) in enumerate(_PRESETS):
+    with qf_cols[_pi]:
+        if st.button(_plabel, key=f"preset_{_pi}", use_container_width=True):
+            for _k, _v in _pstate.items():
+                st.session_state[_k] = _v
+            st.rerun()
+
+st.markdown("")
+
+tab_queue, tab_a, tab_b, tab_c, tab_ca, tab_us, tab_pipeline = st.tabs([
+    f"Queue ({uncontacted_a})", "Tier A", "Tier B", "Tier C", "🇨🇦 Canadian", "🇺🇸 American", "Pipeline"
 ])
 
 
@@ -637,8 +659,25 @@ with tab_b:
 with tab_c:
     render_tier_tab(filtered[filtered["priority_rank"] == 3], "No Tier C prospects match your current filters.", "tc")
 
+with tab_ca:
+    st.markdown("### 🇨🇦 Canadian Prospects")
+    ca_df = filtered[filtered["country"] == "CA"].sort_values(["priority_rank", "composite_score"], ascending=[True, False])
+    if ca_df.empty:
+        st.info("No Canadian prospects match current filters.")
+    else:
+        ca_a = len(ca_df[ca_df["priority_rank"] == 1])
+        ca_b = len(ca_df[ca_df["priority_rank"] == 2])
+        ca_contacted = len(ca_df[ca_df["status"] != "not_contacted"])
+        c1, c2, c3 = st.columns(3)
+        c1.metric("CA Tier A", ca_a)
+        c2.metric("CA Tier B", ca_b)
+        c3.metric("CA Contacted", ca_contacted)
+        st.markdown("")
+        for _, row in ca_df.iterrows():
+            render_institution_card(row, key_prefix="ca_")
+
 with tab_us:
-    st.markdown("### US Market Prospects")
+    st.markdown("### 🇺🇸 American Prospects")
     us_df = filtered[filtered["country"] == "US"].sort_values(["priority_rank", "composite_score"], ascending=[True, False])
     if us_df.empty:
         st.info("No US prospects match current filters.")
@@ -656,6 +695,7 @@ with tab_us:
 
 with tab_pipeline:
     st.markdown("### Pipeline — All Institutions by Stage")
+    st.caption("Move prospects between stages by opening their card and changing the Pipeline Status dropdown. Everyone on the team can update this.")
     for stage in STATUS_ORDER:
         stage_df = df[df["status"] == stage].sort_values("composite_score", ascending=False)
         count = len(stage_df)
