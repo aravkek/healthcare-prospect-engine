@@ -288,7 +288,7 @@ with tab_health:
             dept_color = DEPT_COLORS.get(member_dept, DEPT_COLORS["unassigned"])
 
             # Find card summary for this member (keyed by email or name)
-            member_email_key = member.get("email", "").lower()
+            member_email_key = (member.get("email") or "").lower()
             member_data = card_summary.get(member_email_key)
             if not member_data:
                 # Fall back to searching by name
@@ -529,7 +529,7 @@ with tab_cards:
     # Per-member card timeline
     for member in all_members:
         member_name = member["name"]
-        member_email_key = member.get("email", "").lower()
+        member_email_key = (member.get("email") or "").lower()
 
         member_cards = [
             c for c in all_cards if c.get("member_name") == member_name

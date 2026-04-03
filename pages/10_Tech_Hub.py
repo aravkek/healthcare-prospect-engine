@@ -509,7 +509,7 @@ with tab_team:
     st.markdown("### Tech Team")
 
     activities = get_activity_feed(limit=10)
-    tech_emails = {m.get("email", "").lower() for m in tech_members}
+    tech_emails = {(m.get("email") or "").lower() for m in tech_members}
     tech_names_set = set(tech_member_names)
 
     if tech_members:
