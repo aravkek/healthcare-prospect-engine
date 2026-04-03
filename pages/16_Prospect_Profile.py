@@ -644,7 +644,7 @@ with tab_dm:
         if st.button(dm_btn_label, key="pp_run_dm_research", type="primary"):
             with st.spinner("Researching decision maker..."):
                 try:
-                    result = research_decision_maker(prospect)
+                    result = research_decision_maker(prospect, institution_research=p_research_brief)
                     save_prospect_research(prospect_id, dm_research=result)
                     st.success("DM research saved.")
                     st.cache_data.clear()

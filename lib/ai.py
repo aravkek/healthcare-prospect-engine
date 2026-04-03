@@ -273,7 +273,7 @@ Reference what we already know about their outreach angle if one is recorded.
 A numbered list of the 5 most powerful personalization details to reference in emails, calls, and demos.
 These should be things that show we did our homework — not generic claims."""
 
-    text, _ = call_ai(system, [{"role": "user", "content": user_msg}], max_tokens=2000)
+    text, _ = call_ai(system, [{"role": "user", "content": user_msg}], max_tokens=3000)
     return text
 
 
@@ -389,7 +389,7 @@ Each hook should be a complete sentence we could use almost verbatim.
 Write the ideal first 2 sentences to {first} — as if from a fellow founder who deeply respects their work.
 It should open with their world, not ours. No "I noticed", no "I came across", no compliments."""
 
-    text, _ = call_ai(system, [{"role": "user", "content": user_msg}], max_tokens=1800)
+    text, _ = call_ai(system, [{"role": "user", "content": user_msg}], max_tokens=2500)
     return text
 
 
@@ -442,7 +442,7 @@ Be specific to this institution — not a generic playbook.
 One of: PURSUE AGGRESSIVELY / PURSUE NORMALLY / LOW PRIORITY / SKIP
 With a one-sentence justification tied to specific data."""
 
-    text, _ = call_ai(system, [{"role": "user", "content": user_msg}], max_tokens=1400)
+    text, _ = call_ai(system, [{"role": "user", "content": user_msg}], max_tokens=2000)
     return text
 
 
@@ -581,7 +581,7 @@ SUBJECT: [subject line — under 55 chars, no generic phrases]
 {sender_title}
 MedPort | medport.ca"""
 
-    text, _ = call_ai(system, [{"role": "user", "content": user_msg}], max_tokens=700)
+    text, _ = call_ai(system, [{"role": "user", "content": user_msg}], max_tokens=1200)
 
     # Parse subject and body
     lines = text.strip().split("\n")
