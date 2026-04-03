@@ -239,6 +239,30 @@ with tab_sprint:
     elif admin:
         render_create_sprint_form(email)
 
+    # ── Tech Team ─────────────────────────────────────────────────────────────
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### Tech Team")
+    if tech_members:
+        _tcols = st.columns(min(len(tech_members), 3))
+        for _ti, _tm in enumerate(tech_members):
+            _tname = _tm.get("name", "")
+            _trole = _tm.get("role", "")
+            _tavatar = _tm.get("avatar_color") or TECH_PURPLE
+            _tinitials = "".join(w[0].upper() for w in _tname.split()[:2]) if _tname else "?"
+            with _tcols[_ti % 3]:
+                st.markdown(
+                    f'<div style="display:flex;align-items:center;gap:0.7rem;padding:0.6rem 0.8rem;'
+                    f'background:#1e293b;border-radius:0.6rem;margin-bottom:0.5rem;">'
+                    f'<div style="width:34px;height:34px;border-radius:50%;background:{_tavatar};'
+                    f'display:flex;align-items:center;justify-content:center;font-weight:700;'
+                    f'font-size:0.85rem;color:#fff;flex-shrink:0;">{_tinitials}</div>'
+                    f'<div><div style="font-weight:600;font-size:0.88rem;color:#e2e8f0;">{_tname}</div>'
+                    f'<div style="font-size:0.75rem;color:#64748b;">{_trole}</div></div></div>',
+                    unsafe_allow_html=True,
+                )
+    else:
+        st.caption("No members assigned to Tech yet. Set department in Settings.")
+
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### Sprint Kanban")
 

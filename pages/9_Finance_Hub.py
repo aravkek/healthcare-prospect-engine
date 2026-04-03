@@ -34,6 +34,7 @@ from lib.db import (
     log_activity,
     get_active_sprint,
     get_sprint_tasks,
+    get_team_members,
 )
 from lib.sprint_widget import render_sprint_widget, render_create_sprint_form
 
@@ -234,6 +235,29 @@ with tab_overview:
                     """,
                     unsafe_allow_html=True,
                 )
+
+    # ── Finance Team ──────────────────────────────────────────────────────────
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### Finance Team")
+    _all_members = get_team_members()
+    fin_members = [m for m in _all_members if m.get("department") == "finance"]
+    if not fin_members:
+        st.caption("No members assigned to Finance yet. Set department in Settings.")
+    for m in fin_members:
+        m_name = m.get("name", "")
+        m_role = m.get("role", "")
+        avatar_color = m.get("avatar_color") or FINANCE_COLOR
+        initials = "".join(w[0].upper() for w in m_name.split()[:2]) if m_name else "?"
+        st.markdown(
+            f'<div style="display:flex;align-items:center;gap:0.7rem;padding:0.5rem 0.8rem;'
+            f'background:{MEDPORT_DARK_CARD};border-radius:0.6rem;margin-bottom:0.5rem;">'
+            f'<div style="width:34px;height:34px;border-radius:50%;background:{avatar_color};'
+            f'display:flex;align-items:center;justify-content:center;font-weight:700;'
+            f'font-size:0.85rem;color:#fff;flex-shrink:0;">{initials}</div>'
+            f'<div><div style="font-weight:600;font-size:0.88rem;color:#e2e8f0;">{m_name}</div>'
+            f'<div style="font-size:0.75rem;color:#64748b;">{m_role}</div></div></div>',
+            unsafe_allow_html=True,
+        )
 
 
 # ══════════════════════════════════════════════════════════════════════════════

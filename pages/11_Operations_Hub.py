@@ -255,6 +255,30 @@ with tab_overview:
             unsafe_allow_html=True,
         )
 
+    # ── Operations Team ───────────────────────────────────────────────────────
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### Operations Team")
+    if ops_members:
+        _ocols = st.columns(min(len(ops_members), 3))
+        for _oi, _om in enumerate(ops_members):
+            _oname = _om.get("name", "")
+            _orole = _om.get("role", "")
+            _oavatar = _om.get("avatar_color") or OPS_AMBER
+            _oinitials = "".join(w[0].upper() for w in _oname.split()[:2]) if _oname else "?"
+            with _ocols[_oi % 3]:
+                st.markdown(
+                    f'<div style="display:flex;align-items:center;gap:0.7rem;padding:0.6rem 0.8rem;'
+                    f'background:#1e293b;border-radius:0.6rem;margin-bottom:0.5rem;">'
+                    f'<div style="width:34px;height:34px;border-radius:50%;background:{_oavatar};'
+                    f'display:flex;align-items:center;justify-content:center;font-weight:700;'
+                    f'font-size:0.85rem;color:#fff;flex-shrink:0;">{_oinitials}</div>'
+                    f'<div><div style="font-weight:600;font-size:0.88rem;color:#e2e8f0;">{_oname}</div>'
+                    f'<div style="font-size:0.75rem;color:#64748b;">{_orole}</div></div></div>',
+                    unsafe_allow_html=True,
+                )
+    else:
+        st.caption("No members assigned to Operations yet. Set department in Settings.")
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 2 — Team Health
