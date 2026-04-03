@@ -277,120 +277,97 @@ These should be things that show we did our homework — not generic claims."""
     return text
 
 
-def research_decision_maker(prospect: dict, institution_research: str = "") -> str:
+def research_decision_maker(prospect: dict, institution_research: str = "") -> dict:
     """
-    Generate a hyper-specific decision maker profile including personality,
-    ideology, communication style, and language that resonates with them.
+    Identify the decision maker at this institution and return a structured dict:
+    {name, title, email, phone, linkedin, brief}
+
+    The brief is short (4-6 sentences) — just what the team needs to write a good email.
     """
+    import json as _json
+
     prospect_ctx = _build_prospect_context(prospect)
-    dm_name = prospect.get("decision_maker_name", "")
-    dm_title = prospect.get("decision_maker_title", "")
-    dm_linkedin = prospect.get("decision_maker_linkedin", "")
+    dm_name = (prospect.get("decision_maker_name") or "").strip()
+    dm_title = (prospect.get("decision_maker_title") or "").strip()
+    dm_linkedin = (prospect.get("decision_maker_linkedin") or "").strip()
     inst_name = prospect.get("name", "")
     inst_type = prospect.get("inst_type", "clinic")
     city = prospect.get("city", "")
-    emr = prospect.get("emr_system", "")
+    province = prospect.get("province", "")
 
-    system = f"""You are a relationship intelligence analyst who helps B2B sales teams connect authentically.
-{_MEDPORT_CONTEXT}
+    system = f"""You are a sales intelligence researcher helping a healthcare startup identify and profile
+the right person to contact at a target institution. Be specific and practical — no filler.
+{_MEDPORT_CONTEXT}"""
 
-Your goal: build a profile so detailed that our team can write one email to this specific person
-and have them feel like we genuinely understand their world — not just their job title.
-Focus on personality, ideology, and what makes this person tick professionally and personally."""
+    if not dm_name or dm_name.lower() in ("unknown", "not identified", "n/a"):
+        user_msg = f"""Find the most likely decision maker at this institution for adopting a new patient intake tool.
 
-    if not dm_name or dm_name.lower() in ("unknown", "not identified"):
-        user_msg = f"""We don't have a named decision maker yet. Build a profile of the TYPICAL person
-who holds this role at this type of institution.
-
+INSTITUTION: {inst_name} ({inst_type}, {city}, {province})
 {prospect_ctx}
+INSTITUTION RESEARCH: {institution_research or "Not yet available"}
 
-INSTITUTION RESEARCH:
-{institution_research or "Not yet available"}
+Your job:
+1. Name the SPECIFIC person at {inst_name} who would sign off on adopting MedPort (or the closest real person you know of from your training data).
+2. If you know their actual name and email from your training data, include it. If not, name the role/title and leave name/email blank.
+3. Write a SHORT brief (4-6 sentences max) covering: who they are, what they care about, and the one angle that will land in a cold email.
 
-**MOST LIKELY DECISION MAKER**
-Who specifically at a {inst_type} like {inst_name} in {city} decides to adopt a new patient intake tool?
-Give their most common title and why it's them (not the doctors, not the board).
-
-**PERSONALITY ARCHETYPE**
-What type of professional tends to be in this role at a {inst_type}?
-Are they typically data-driven operators? Relationship-first community builders?
-Academically-oriented administrators? Process-improvement enthusiasts?
-What does their LinkedIn likely look like — are they active, passive, credentialed?
-
-**THEIR PROFESSIONAL IDEOLOGY**
-What do they fundamentally believe about healthcare administration?
-What is their mental model for evaluating new tools?
-Do they think in terms of patient outcomes, operational efficiency, staff wellbeing, or compliance?
-What language do they use internally when making decisions?
-
-**WHAT RESONATES VS. WHAT REPELS**
-Language that makes them lean in:
-- e.g., "reduces time your team spends on admin", "patients arrive already pre-registered"
-Language that makes them tune out:
-- e.g., "AI-powered", "disruptive", "seamless solution", "game-changer"
-
-**COLD EMAIL PSYCHOLOGY FOR THIS ROLE**
-- Best email tone: formal/collegial/peer-to-peer? Why?
-- Subject line that earns a click from this person specifically
-- Opening sentence that makes them keep reading (NOT an observation about their website)
-- The instinctive objection they'll have in 10 seconds — and how to pre-empt it warmly
-
-**5 PERSONALIZATION HOOKS FOR {inst_name.upper()}**
-5 specific, natural things to reference in outreach that show we know their world.
-These should feel like something a thoughtful colleague would say — not a sales pitch."""
+Respond ONLY with this JSON (no other text, no markdown code fences):
+{{
+  "name": "Full Name if known, else empty string",
+  "title": "Job Title",
+  "email": "work email if known from training data, else empty string",
+  "phone": "phone if known, else empty string",
+  "linkedin": "LinkedIn URL if known, else empty string",
+  "brief": "4-6 sentence profile: who they are, what they care about most, tone to use, one specific hook for {inst_name}"
+}}"""
 
     else:
         first = dm_name.split()[0]
-        user_msg = f"""Build a deep intelligence and personality profile for this specific decision maker.
+        user_msg = f"""Profile this specific decision maker for a cold outreach by MedPort.
 
+PERSON: {dm_name}, {dm_title} at {inst_name} ({inst_type}, {city}, {province})
+LinkedIn: {dm_linkedin or "unknown"}
 {prospect_ctx}
+INSTITUTION RESEARCH: {institution_research or "Not yet available"}
 
-INSTITUTION RESEARCH:
-{institution_research or "Not yet available — infer from role, institution type, and city"}
+Tasks:
+1. Fill in any missing contact info (email, phone, LinkedIn) if you know it from your training data.
+2. Write a SHORT brief (4-6 sentences): who {first} is, what they prioritize, what email tone works for them, one specific hook to open with.
 
-**WHO {dm_name.upper()} IS**
-Title: {dm_title} at {inst_name} ({inst_type}, {city})
-LinkedIn: {dm_linkedin or "not available"}
+Respond ONLY with this JSON (no other text, no markdown code fences):
+{{
+  "name": "{dm_name}",
+  "title": "{dm_title}",
+  "email": "work email if known, else empty string",
+  "phone": "phone if known, else empty string",
+  "linkedin": "{dm_linkedin}",
+  "brief": "4-6 sentence profile: background, what {first} cares about, ideal tone, one specific personalized hook"
+}}"""
 
-Based on everything above:
-- What is their likely background and career path to this role?
-- What kind of institution is {inst_name} — prestigious research institution, community-focused,
-  efficiency-driven, student/patient welfare oriented?
-- What does {first}'s day actually look like? What decisions land on their desk vs. someone else's?
-- What are they empowered to decide alone vs. what needs a committee?
+    text, _ = call_ai(system, [{"role": "user", "content": user_msg}], max_tokens=600)
 
-**{first.upper()}'S PERSONALITY AND PROFESSIONAL IDEOLOGY**
-This is the most important section. Think carefully:
-- Are they a data person or a relationships person? How do you know?
-- What leadership style does a {dm_title} at this type of institution typically exhibit?
-- What do they fundamentally believe about their institution's role in healthcare?
-- What is their decision-making framework? (ROI-first? Risk-averse? Innovation-curious?)
-- How do they talk about their work publicly vs. internally?
-- If they've been in this role a while, what that says about their priorities.
-
-**WHAT {first.upper()} RESPONDS TO — AND WHAT TURNS THEM OFF**
-Language that resonates with someone in {first}'s position at a {inst_type}:
-- Specific phrases, framings, and proof types that land with this profile
-Language that immediately signals "sales pitch" and gets ignored:
-- What to never say to a {dm_title}
-
-**HOW TO WRITE TO {first.upper()} SPECIFICALLY**
-- Email tone: formal, collegial, or peer-to-peer? Give the reason.
-- What subject line earns a click from {first} (not generic curiosity — earned attention)
-- The ideal first sentence — NOT starting with "I noticed" or "I came across"
-  Instead: an insight about their world, a peer observation, a question that assumes competence
-- The objection {first} will have in 10 seconds — and the one-sentence pre-emption
-
-**5 PERSONALIZATION HOOKS FOR THIS EMAIL**
-5 specific details about {inst_name} or {dm_name}'s role that we can weave naturally into one email.
-Each hook should be a complete sentence we could use almost verbatim.
-
-**SUGGESTED EMAIL OPENER (2 sentences)**
-Write the ideal first 2 sentences to {first} — as if from a fellow founder who deeply respects their work.
-It should open with their world, not ours. No "I noticed", no "I came across", no compliments."""
-
-    text, _ = call_ai(system, [{"role": "user", "content": user_msg}], max_tokens=2500)
-    return text
+    # Parse JSON response; fall back to wrapping raw text as brief
+    try:
+        # Strip any accidental code fences
+        clean = text.strip()
+        if clean.startswith("```"):
+            clean = clean.split("```")[1]
+            if clean.startswith("json"):
+                clean = clean[4:]
+        result = _json.loads(clean.strip())
+        # Ensure all expected keys exist
+        for key in ("name", "title", "email", "phone", "linkedin", "brief"):
+            result.setdefault(key, "")
+        return result
+    except Exception:
+        return {
+            "name": dm_name,
+            "title": dm_title,
+            "email": "",
+            "phone": "",
+            "linkedin": dm_linkedin,
+            "brief": text.strip(),
+        }
 
 
 def analyze_fit(prospect: dict, research_brief: str = "", dm_research: str = "") -> str:

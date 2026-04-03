@@ -583,11 +583,49 @@ with tab_research:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 with tab_dm:
+
+    # ── Prominent research button ────────────────────────────────────────────
+    dm_btn_label = "Re-run Decision Maker Research" if p_dm_research else "Find & Research Decision Maker"
+    if not has_ai_configured():
+        st.warning("AI not configured — set ANTHROPIC_API_KEY to enable DM research.")
+    else:
+        if st.button(
+            f"🔎 {dm_btn_label}",
+            key="pp_run_dm_research",
+            type="primary",
+            use_container_width=True,
+        ):
+            with st.spinner("Identifying and profiling decision maker..."):
+                try:
+                    result = research_decision_maker(prospect, institution_research=p_research_brief)
+                    # Build DB update: autofill any fields that are currently blank
+                    db_updates: dict = {}
+                    if result.get("name") and not p_dm_name:
+                        db_updates["decision_maker_name"] = result["name"]
+                    if result.get("title") and not p_dm_title:
+                        db_updates["decision_maker_title"] = result["title"]
+                    if result.get("email") and not p_dm_email:
+                        db_updates["decision_maker_email"] = result["email"]
+                    if result.get("phone") and not p_dm_phone:
+                        db_updates["decision_maker_phone"] = result["phone"]
+                    if result.get("linkedin") and not p_dm_linkedin:
+                        db_updates["decision_maker_linkedin"] = result["linkedin"]
+                    if db_updates:
+                        update_prospect(prospect_id, db_updates)
+                    save_prospect_research(prospect_id, dm_research=result.get("brief", ""))
+                    st.success("Decision maker identified and fields autofilled.")
+                    st.cache_data.clear()
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"DM research failed: {exc}")
+
+    st.markdown("---")
+
     col_dm_form, col_dm_research = st.columns([1, 1], gap="large")
 
     # ── Left: edit DM details ────────────────────────────────────────────────
     with col_dm_form:
-        st.markdown("## Decision Maker Details")
+        st.markdown("### Decision Maker Details")
 
         dm_name_input = st.text_input("Full Name", value=p_dm_name, key="pp_dm_name")
         dm_title_input = st.text_input("Title / Role", value=p_dm_title, key="pp_dm_title")
@@ -595,7 +633,7 @@ with tab_dm:
         dm_phone_input = st.text_input("Phone", value=p_dm_phone, key="pp_dm_phone")
         dm_linkedin_input = st.text_input("LinkedIn URL", value=p_dm_linkedin, key="pp_dm_linkedin")
 
-        if st.button("Save Decision Maker", key="pp_save_dm", type="primary", use_container_width=True):
+        if st.button("Save Decision Maker", key="pp_save_dm", type="secondary", use_container_width=True):
             update_prospect(prospect_id, {
                 "decision_maker_name": dm_name_input.strip(),
                 "decision_maker_title": dm_title_input.strip(),
@@ -620,12 +658,9 @@ with tab_dm:
                 unsafe_allow_html=True,
             )
 
-    # ── Right: DM research ───────────────────────────────────────────────────
+    # ── Right: DM research brief ─────────────────────────────────────────────
     with col_dm_research:
-        st.markdown("## DM Research")
-
-        if not has_ai_configured():
-            st.warning("AI not configured.")
+        st.markdown("### Research Brief")
 
         if p_dm_research:
             st.markdown(
@@ -633,28 +668,8 @@ with tab_dm:
                 unsafe_allow_html=True,
             )
             st.caption(f"Last updated: {_fmt_date(p_research_updated_at)}")
-            dm_btn_label = "Re-run DM Research"
         else:
-            st.markdown(
-                "AI will profile this decision maker — background, priorities, communication style, "
-                "and how to approach them. Enter a name above for best results."
-            )
-            dm_btn_label = "Run Decision Maker Research"
-
-        if st.button(dm_btn_label, key="pp_run_dm_research", type="primary"):
-            with st.spinner("Researching decision maker..."):
-                try:
-                    result = research_decision_maker(prospect, institution_research=p_research_brief)
-                    save_prospect_research(prospect_id, dm_research=result)
-                    st.success("DM research saved.")
-                    st.cache_data.clear()
-                    st.rerun()
-                except Exception as exc:
-                    st.error(f"DM research failed: {exc}")
-
-        st.caption(
-            "If no DM name is entered, AI will profile the typical decision maker for this institution type."
-        )
+            st.info("Click **Find & Research Decision Maker** above to identify the right contact and get a brief.")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

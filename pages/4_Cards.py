@@ -18,7 +18,7 @@ from lib.styles import (
     CARD_GREY, CARD_YELLOW, CARD_RED,
 )
 from lib.auth import check_auth, is_admin, render_logout_button
-from lib.db import get_cards, issue_card, get_card_summary, log_activity, get_team_members
+from lib.db import get_cards, issue_card, get_card_summary, log_activity, get_team_members, delete_card
 
 st.set_page_config(
     page_title="Cards — MedPort",
@@ -270,3 +270,15 @@ for member in all_members:
                 """,
                 unsafe_allow_html=True,
             )
+            if admin:
+                card_id_val = card.get("id", "")
+                if card_id_val and st.button(
+                    "Delete card",
+                    key=f"del_card_{card_id_val}",
+                    type="secondary",
+                    help="Permanently remove this card",
+                ):
+                    if delete_card(card_id_val):
+                        st.success("Card deleted.")
+                        get_cards.clear()
+                        st.rerun()

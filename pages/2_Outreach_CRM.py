@@ -195,17 +195,8 @@ def render_institution_card(row: pd.Series, queue_mode: bool = False, key_prefix
         if followup_due:
             badge_parts.append('<span style="background:#fef2f2;color:#DC2626;border:1px solid #fecaca;border-radius:6px;padding:2px 8px;font-size:0.72rem;font-weight:700;">⏰ Follow-up due</span>')
 
-        badge_row_col, profile_btn_col = st.columns([6, 1])
-        with badge_row_col:
-            if badge_parts:
-                st.markdown(" &nbsp;".join(badge_parts), unsafe_allow_html=True)
-        with profile_btn_col:
-            st.page_link(
-                "pages/16_Prospect_Profile.py",
-                label="Full Profile →",
-                use_container_width=True,
-                query_params={"id": prospect_id},
-            )
+        if badge_parts:
+            st.markdown(" &nbsp;".join(badge_parts), unsafe_allow_html=True)
 
         st.markdown('<hr class="subtle">', unsafe_allow_html=True)
 
@@ -390,6 +381,14 @@ def render_institution_card(row: pd.Series, queue_mode: bool = False, key_prefix
 
         if outreach_count > 0:
             st.caption(f"Outreach sent {outreach_count}x")
+
+        st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
+        st.page_link(
+            "pages/16_Prospect_Profile.py",
+            label="🔍 Open Full Profile — Research, DM Bio & Email Drafts",
+            use_container_width=True,
+            query_params={"id": prospect_id},
+        )
 
         st.markdown("</div>", unsafe_allow_html=True)
 

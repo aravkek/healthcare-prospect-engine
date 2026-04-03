@@ -432,6 +432,20 @@ def get_card_summary() -> dict[str, dict]:
     return summary
 
 
+def delete_card(card_id: str) -> bool:
+    """Hard-delete a card by ID. Admin only — enforced at page level. Returns True on success."""
+    client = get_client()
+    if client is None:
+        return False
+    try:
+        client.table("team_cards").delete().eq("id", card_id).execute()
+        get_cards.clear()
+        return True
+    except Exception as e:
+        st.error(f"Failed to delete card: {e}")
+        return False
+
+
 # ─── Saved Searches ───────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=60)
