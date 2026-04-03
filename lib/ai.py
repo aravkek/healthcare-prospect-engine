@@ -79,6 +79,57 @@ def has_ai_configured() -> bool:
     return bool(_secret("ANTHROPIC_API_KEY") or _secret("GROQ_API_KEY"))
 
 
+# ─── Web research (Tavily) ────────────────────────────────────────────────────
+
+def has_web_search() -> bool:
+    """True if Tavily API key is configured."""
+    return bool(_secret("TAVILY_API_KEY"))
+
+
+def _tavily_search(query: str, max_results: int = 5) -> list[dict]:
+    """
+    Search the web using Tavily. Returns list of {title, url, content} dicts.
+    Falls back to empty list if key not configured or request fails.
+    """
+    import requests as _req
+    api_key = _secret("TAVILY_API_KEY", "")
+    if not api_key:
+        return []
+    try:
+        resp = _req.post(
+            "https://api.tavily.com/search",
+            json={
+                "api_key": api_key,
+                "query": query,
+                "search_depth": "advanced",
+                "include_raw_content": False,
+                "include_answer": True,
+                "max_results": max_results,
+            },
+            timeout=20,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("results", [])
+    except Exception:
+        return []
+
+
+def _format_search_results(results: list[dict], max_chars: int = 4000) -> str:
+    """Format Tavily search results into a compact text block for Claude."""
+    if not results:
+        return "No web results found."
+    parts = []
+    total = 0
+    for r in results:
+        snippet = f"SOURCE: {r.get('title', 'Unknown')} ({r.get('url', '')})\n{r.get('content', '')}"
+        if total + len(snippet) > max_chars:
+            break
+        parts.append(snippet)
+        total += len(snippet)
+    return "\n\n---\n\n".join(parts)
+
+
 def ai_provider_badge() -> str:
     if _secret("ANTHROPIC_API_KEY"):
         return "Claude Sonnet"
@@ -217,61 +268,66 @@ def _build_prospect_context(prospect: dict) -> str:
 def research_institution(prospect: dict) -> str:
     """
     Generate a hyper-specific institutional intelligence brief.
-    Every section must reference actual data points from this prospect.
+    Uses live web search (Tavily) when available to ground output in real facts.
     """
     prospect_ctx = _build_prospect_context(prospect)
     name = prospect.get("name", "this institution")
     inst_type = prospect.get("inst_type", "healthcare institution")
     emr = prospect.get("emr_system", "")
     city = prospect.get("city", "")
+    province = prospect.get("province", "")
+    website = prospect.get("website", "")
+
+    # ── Live web research ─────────────────────────────────────────────────────
+    web_context = ""
+    if has_web_search():
+        queries = [
+            f"{name} {city} student health counselling wellness services",
+            f"{name} {city} healthcare clinic patient intake",
+            f"{name} annual report student health mental health strategy",
+        ]
+        if website:
+            queries.insert(0, f"site:{website} health services team staff")
+        all_results = []
+        for q in queries[:3]:
+            all_results.extend(_tavily_search(q, max_results=3))
+        if all_results:
+            web_context = f"\n\nLIVE WEB RESEARCH (use these facts directly — they are real):\n{_format_search_results(all_results, max_chars=5000)}"
 
     system = f"""You are a senior B2B sales intelligence analyst at a Canadian healthcare startup.
 {_MEDPORT_CONTEXT}
 
-CRITICAL RULE: Every sentence you write must be specific to THIS institution.
-Never write generic statements that could apply to any clinic.
-If you catch yourself writing something that could appear in any brief, rewrite it with a specific fact, inference, or angle tied to this exact prospect.
-You are preparing intelligence that will help our team walk in fully prepared — not a Wikipedia summary."""
+CRITICAL RULE: Ground every sentence in real, specific facts — from the web research provided
+or from the known prospect data. Never write generic statements that could apply to any clinic.
+You are preparing intelligence that will help our team walk in fully prepared."""
 
-    user_msg = f"""Write a deep intelligence brief for this prospect. Use every data point below.
+    user_msg = f"""Write a deep intelligence brief for this prospect.
 
-{prospect_ctx}
-
-Write each section below. Be brutally specific — reference their actual EMR by name,
-their city and province, their patient volume numbers, any tech signals detected.
-Draw inferences from what you know about {inst_type} institutions in {city}, Canada.
+{prospect_ctx}{web_context}
 
 **INSTITUTION OVERVIEW**
-3 sentences max. What is this institution specifically? Who do they serve? What makes them distinct from a generic {inst_type}?
-If their website is available, infer what you can about their size, focus areas, and patient demographics.
+3 sentences. What is this institution specifically, who do they serve, what makes them distinct?
+Reference actual facts from the web research above.
 
 **THEIR CURRENT INTAKE REALITY**
-Based on their EMR ({emr or "unknown system"}), patient volume, and any phone intake signals —
-paint a picture of what check-in day probably looks like right now at {name}.
-What are patients doing? What is the front desk doing? Where is the friction?
-Be specific about how {emr or "their EMR"} clinics typically handle this.
+What does check-in day actually look like at {name} right now?
+What are patients doing, what is the front desk doing, where is the friction?
+Reference their EMR ({emr or "unknown"}), patient volume, and any specific signals found in the web research.
 
-**WHY THIS INSTITUTION SPECIFICALLY NEEDS MEDPORT**
-3 specific reasons — not generic reasons why any clinic needs us.
-Connect MedPort's capabilities directly to their EMR, their volume, their type, and their location.
-If they have phone intake evidence, reference it. If they use specific AI tools or lack them, factor that in.
+**WHY THEY SPECIFICALLY NEED MEDPORT**
+3 specific reasons — tied to their real situation, EMR, volume, and type.
+Reference actual things found in the research, not generic claims.
 
 **DECISION MAKER LANDSCAPE**
-Who at {name} signs off on a tool like MedPort? What does their title tell us about their priorities?
-What is a {(prospect.get("decision_maker_title") or inst_type + " administrator")} evaluated on?
-What would make them say yes? What would make them say no in 5 seconds?
-
-**COMPETITIVE & RISK FACTORS**
-What could block this deal? Reference their competitor risk rating, any inertia signals, budget constraints typical of a {inst_type}, or incumbent tools.
+Who signs off on a tool like MedPort at {name}?
+What would make them say yes — and what would make them delete the email in 5 seconds?
 
 **RECOMMENDED OUTREACH STRATEGY**
-The single sharpest angle for the first email to {name}.
-Specific subject line style. Specific hook. Specific value prop to lead with.
-Reference what we already know about their outreach angle if one is recorded.
+The single sharpest angle for the first email.
+Specific subject line. Specific hook. Specific value prop. Grounded in what we found.
 
-**5 SPECIFIC FACTS TO WEAVE INTO OUTREACH**
-A numbered list of the 5 most powerful personalization details to reference in emails, calls, and demos.
-These should be things that show we did our homework — not generic claims."""
+**5 FACTS TO WEAVE INTO OUTREACH**
+Numbered. Specific. From real research — things that prove we did our homework."""
 
     text, _ = call_ai(system, [{"role": "user", "content": user_msg}], max_tokens=3000)
     return text
@@ -279,10 +335,15 @@ These should be things that show we did our homework — not generic claims."""
 
 def research_decision_maker(prospect: dict, institution_research: str = "") -> dict:
     """
-    Identify the decision maker at this institution and return a structured dict:
-    {name, title, email, phone, linkedin, brief}
+    Find and profile the real decision maker at this institution.
 
-    The brief is short (4-6 sentences) — just what the team needs to write a good email.
+    Pipeline:
+      1. If Tavily key present: search the web for their staff page, team bios,
+         LinkedIn, publications — then pass real findings to Claude.
+      2. If no Tavily key: Claude recalls from training data (best-effort).
+
+    Returns dict: {name, title, email, phone, linkedin, brief}
+    The brief covers background, values, communication style, and one outreach hook.
     """
     import json as _json
 
@@ -294,75 +355,119 @@ def research_decision_maker(prospect: dict, institution_research: str = "") -> d
     inst_type = prospect.get("inst_type", "clinic")
     city = prospect.get("city", "")
     province = prospect.get("province", "")
+    website = prospect.get("website", "")
 
-    system = f"""You are a sales intelligence researcher helping a healthcare startup identify and profile
-the right person to contact at a target institution. Be specific and practical — no filler.
-{_MEDPORT_CONTEXT}"""
+    # ── Phase 1: Live web research ────────────────────────────────────────────
+    web_context = ""
+    found_name = dm_name  # will be updated if web finds someone
+    found_title = dm_title
+
+    if has_web_search():
+        search_results = []
+
+        if dm_name and dm_name.lower() not in ("unknown", "not identified", "n/a"):
+            # We have a name — research that specific person
+            search_results.extend(_tavily_search(
+                f"{dm_name} {inst_name} {city} student health wellness background",
+                max_results=4,
+            ))
+            search_results.extend(_tavily_search(
+                f"{dm_name} {inst_name} LinkedIn OR biography OR publications",
+                max_results=3,
+            ))
+        else:
+            # No name yet — find who it is first
+            search_results.extend(_tavily_search(
+                f"{inst_name} student health counselling wellness director executive director staff team",
+                max_results=4,
+            ))
+            search_results.extend(_tavily_search(
+                f"{inst_name} {city} student health services staff team about",
+                max_results=3,
+            ))
+            if website:
+                search_results.extend(_tavily_search(
+                    f"site:{website} student health director team",
+                    max_results=3,
+                ))
+
+        if search_results:
+            web_context = f"\n\nLIVE WEB RESEARCH (these are real facts — use them directly):\n{_format_search_results(search_results, max_chars=6000)}"
+
+    # ── Phase 2: Claude synthesis ─────────────────────────────────────────────
+    system = f"""You are a sales intelligence researcher. Your job is to identify and profile the exact
+person our team should email at a target institution — with enough background that we can write
+one email that feels like it came from someone who genuinely understands their world.
+
+{_MEDPORT_CONTEXT}
+
+Rules:
+- Use the web research provided. If a name is mentioned there, use it.
+- If the web research doesn't name someone, infer the most likely specific person and title.
+- Be concise — the brief should be 6-10 sentences covering: career background, what they care about,
+  how they make decisions, what language lands with them, and one specific outreach hook.
+- Never invent email addresses. Only include an email if it appears in the research or is
+  an obvious institutional format (e.g. first.last@uwindsor.ca from a confirmed name).
+- Respond ONLY with valid JSON — no markdown fences, no extra text."""
 
     if not dm_name or dm_name.lower() in ("unknown", "not identified", "n/a"):
-        user_msg = f"""Find the most likely decision maker at this institution for adopting a new patient intake tool.
+        user_msg = f"""Find the decision maker at {inst_name} for adopting a digital patient intake tool.
 
 INSTITUTION: {inst_name} ({inst_type}, {city}, {province})
 {prospect_ctx}
 INSTITUTION RESEARCH: {institution_research or "Not yet available"}
+{web_context}
 
-Your job:
-1. Name the SPECIFIC person at {inst_name} who would sign off on adopting MedPort (or the closest real person you know of from your training data).
-2. If you know their actual name and email from your training data, include it. If not, name the role/title and leave name/email blank.
-3. Write a SHORT brief (4-6 sentences max) covering: who they are, what they care about, and the one angle that will land in a cold email.
+From the web research above, identify the specific person who leads or directs student health,
+counselling, or wellness services at {inst_name}. If you find their name in the research, use it.
 
-Respond ONLY with this JSON (no other text, no markdown code fences):
+Return this JSON:
 {{
-  "name": "Full Name if known, else empty string",
-  "title": "Job Title",
-  "email": "work email if known from training data, else empty string",
-  "phone": "phone if known, else empty string",
-  "linkedin": "LinkedIn URL if known, else empty string",
-  "brief": "4-6 sentence profile: who they are, what they care about most, tone to use, one specific hook for {inst_name}"
+  "name": "Full name from research, or empty string if not found",
+  "title": "Their exact title from research, or most likely title if not found",
+  "email": "Their email if visible in research, else empty string",
+  "phone": "Their phone if in research, else empty string",
+  "linkedin": "Their LinkedIn URL if in research, else empty string",
+  "brief": "6-10 sentences: career background and path to this role, what they care about (patient outcomes, staff load, compliance, etc.), how they evaluate tools, what email tone resonates, what to never say to them, and one specific outreach hook tied to {inst_name}"
 }}"""
-
     else:
         first = dm_name.split()[0]
-        user_msg = f"""Profile this specific decision maker for a cold outreach by MedPort.
+        user_msg = f"""Research and profile {dm_name}, {dm_title} at {inst_name}.
 
-PERSON: {dm_name}, {dm_title} at {inst_name} ({inst_type}, {city}, {province})
-LinkedIn: {dm_linkedin or "unknown"}
+INSTITUTION: {inst_name} ({inst_type}, {city}, {province})
 {prospect_ctx}
 INSTITUTION RESEARCH: {institution_research or "Not yet available"}
+{web_context}
 
-Tasks:
-1. Fill in any missing contact info (email, phone, LinkedIn) if you know it from your training data.
-2. Write a SHORT brief (4-6 sentences): who {first} is, what they prioritize, what email tone works for them, one specific hook to open with.
+Using the web research above plus any knowledge you have, build a complete profile of {dm_name}.
 
-Respond ONLY with this JSON (no other text, no markdown code fences):
+Return this JSON:
 {{
   "name": "{dm_name}",
-  "title": "{dm_title}",
-  "email": "work email if known, else empty string",
-  "phone": "phone if known, else empty string",
-  "linkedin": "{dm_linkedin}",
-  "brief": "4-6 sentence profile: background, what {first} cares about, ideal tone, one specific personalized hook"
+  "title": "{dm_title or 'their title'}",
+  "email": "Their work email if found in research, else empty string",
+  "phone": "Their phone if found, else empty string",
+  "linkedin": "Their LinkedIn if found, else empty string",
+  "brief": "6-10 sentences: {first}'s career path to this role, academic/professional background, what they personally care about, their decision-making style, publications or initiatives they've led, what language resonates with them vs what gets them to delete an email, and one specific personalized hook for outreach"
 }}"""
 
-    text, _ = call_ai(system, [{"role": "user", "content": user_msg}], max_tokens=600)
+    text, _ = call_ai(system, [{"role": "user", "content": user_msg}], max_tokens=900)
 
-    # Parse JSON response; fall back to wrapping raw text as brief
+    # ── Parse JSON ────────────────────────────────────────────────────────────
     try:
-        # Strip any accidental code fences
         clean = text.strip()
         if clean.startswith("```"):
             clean = clean.split("```")[1]
             if clean.startswith("json"):
                 clean = clean[4:]
         result = _json.loads(clean.strip())
-        # Ensure all expected keys exist
         for key in ("name", "title", "email", "phone", "linkedin", "brief"):
             result.setdefault(key, "")
         return result
     except Exception:
         return {
-            "name": dm_name,
-            "title": dm_title,
+            "name": found_name,
+            "title": found_title,
             "email": "",
             "phone": "",
             "linkedin": dm_linkedin,

@@ -32,7 +32,7 @@ from lib.db import (
 )
 from lib.ai import (
     research_institution, research_decision_maker, analyze_fit,
-    draft_outreach_email, draft_followup_email, has_ai_configured,
+    draft_outreach_email, draft_followup_email, has_ai_configured, has_web_search,
 )
 
 inject_css()
@@ -536,7 +536,8 @@ with tab_research:
         )
         run_research_label = "Run Institution Research"
 
-    if st.button(run_research_label, key="pp_run_research", type="primary"):
+    web_badge = " 🌐 Live Web" if has_web_search() else " 🧠 AI Memory"
+    if st.button(run_research_label + web_badge, key="pp_run_research", type="primary"):
         with st.spinner(f"Researching {p_name}..."):
             try:
                 result = research_institution(prospect)
@@ -585,17 +586,22 @@ with tab_research:
 with tab_dm:
 
     # ── Prominent research button ────────────────────────────────────────────
-    dm_btn_label = "Re-run Decision Maker Research" if p_dm_research else "Find & Research Decision Maker"
+    _dm_web = has_web_search()
+    _dm_base = "Re-run Decision Maker Research" if p_dm_research else "Find & Research Decision Maker"
+    dm_btn_label = f"🔎 {_dm_base} {'🌐 Live Web' if _dm_web else '🧠 AI Memory'}"
+    if not _dm_web:
+        st.info("💡 Add a **TAVILY_API_KEY** to Streamlit secrets to enable live web research — finds the real person, pulls their bio, publications, and initiatives automatically.")
     if not has_ai_configured():
         st.warning("AI not configured — set ANTHROPIC_API_KEY to enable DM research.")
     else:
         if st.button(
-            f"🔎 {dm_btn_label}",
+            dm_btn_label,
             key="pp_run_dm_research",
             type="primary",
             use_container_width=True,
         ):
-            with st.spinner("Identifying and profiling decision maker..."):
+            _spin_msg = "Searching the web + profiling decision maker..." if has_web_search() else "Profiling decision maker from AI memory..."
+            with st.spinner(_spin_msg):
                 try:
                     result = research_decision_maker(prospect, institution_research=p_research_brief)
                     # Build DB update: autofill any fields that are currently blank
