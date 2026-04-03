@@ -23,7 +23,7 @@ from lib.styles import (
 )
 from lib.auth import check_auth, is_admin, render_logout_button
 from lib.db import (
-    load_prospects, update_prospect, log_activity,
+    load_prospects, update_prospect, add_prospect, log_activity,
     get_saved_searches, save_search, delete_saved_search, increment_search_use_count,
     get_team_members,
 )
@@ -673,8 +673,8 @@ for _pi, (_plabel, _pstate) in enumerate(_PRESETS):
 
 st.markdown("")
 
-tab_queue, tab_a, tab_b, tab_c, tab_ca, tab_us, tab_pipeline = st.tabs([
-    f"Queue ({uncontacted_a})", "Tier A", "Tier B", "Tier C", "🇨🇦 Canadian", "🇺🇸 American", "Pipeline"
+tab_queue, tab_a, tab_b, tab_c, tab_ca, tab_us, tab_pipeline, tab_add = st.tabs([
+    f"Queue ({uncontacted_a})", "Tier A", "Tier B", "Tier C", "🇨🇦 Canadian", "🇺🇸 American", "Pipeline", "➕ Add Contact"
 ])
 
 
@@ -764,3 +764,131 @@ with tab_pipeline:
         else:
             st.caption("None yet.")
         st.markdown("")
+
+# ─── Add Contact Tab ──────────────────────────────────────────────────────────
+
+with tab_add:
+    st.markdown("### Add a New Contact")
+    st.markdown(
+        '<div style="color:#64748b;font-size:0.9rem;margin-bottom:1.25rem;">'
+        "Manually add any clinic, hospital, dental, physio, mental health, or university contact "
+        "you've met or communicated with. They'll appear in the CRM instantly."
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    with st.form("add_contact_form", clear_on_submit=True):
+
+        # ── Institution info ──────────────────────────────────────────────────
+        st.markdown("#### Institution")
+        ac_col1, ac_col2 = st.columns(2)
+        with ac_col1:
+            ac_name = st.text_input("Institution / Clinic Name *", placeholder="e.g. UHN Toronto General", max_chars=200)
+            ac_type = st.selectbox(
+                "Type *",
+                ["clinic", "university_health", "hospital", "dental", "physio",
+                 "mental_health", "walk_in", "specialist", "other"],
+                format_func=lambda t: {
+                    "clinic": "Clinic (GP / Family Medicine)",
+                    "university_health": "University Health Centre",
+                    "hospital": "Hospital / Health System",
+                    "dental": "Dental Practice",
+                    "physio": "Physiotherapy / Rehab",
+                    "mental_health": "Mental Health / Counselling",
+                    "walk_in": "Walk-in Clinic",
+                    "specialist": "Specialist Clinic",
+                    "other": "Other",
+                }.get(t, t),
+            )
+            ac_city = st.text_input("City *", placeholder="e.g. Windsor", max_chars=100)
+        with ac_col2:
+            ac_province = st.selectbox(
+                "Province / State",
+                ["ON", "BC", "AB", "QC", "MB", "SK", "NS", "NB", "NL", "PE", "NT", "YT", "NU",
+                 "CA (Other)", "NY", "MI", "OH", "PA", "IL", "TX", "CA (US)", "US (Other)"],
+            )
+            ac_country = st.selectbox("Country", ["CA", "US"])
+            ac_website = st.text_input("Website", placeholder="https://", max_chars=300)
+            ac_phone = st.text_input("Main Phone", placeholder="(519) 555-0100", max_chars=30)
+
+        ac_emr = st.text_input(
+            "EMR / Booking System (if known)",
+            placeholder="e.g. Jane App, OSCAR, Accuro, phone only…",
+            max_chars=100,
+        )
+
+        st.markdown("---")
+
+        # ── Decision maker ────────────────────────────────────────────────────
+        st.markdown("#### Decision Maker (if known)")
+        dm_col1, dm_col2 = st.columns(2)
+        with dm_col1:
+            ac_dm_name = st.text_input("Full Name", placeholder="e.g. Dr. Mohsan Beg", max_chars=150)
+            ac_dm_title = st.text_input("Title / Role", placeholder="e.g. Executive Director", max_chars=150)
+            ac_dm_email = st.text_input("Email", placeholder="mbeg@uwindsor.ca", max_chars=200)
+        with dm_col2:
+            ac_dm_phone = st.text_input("Phone (direct)", placeholder="(519) 555-0101", max_chars=30)
+            ac_dm_linkedin = st.text_input("LinkedIn URL", placeholder="linkedin.com/in/...", max_chars=300)
+
+        st.markdown("---")
+
+        # ── CRM settings ──────────────────────────────────────────────────────
+        st.markdown("#### CRM Settings")
+        crm_col1, crm_col2, crm_col3 = st.columns(3)
+        with crm_col1:
+            ac_tier = st.selectbox(
+                "Tier",
+                ["A", "B", "C"],
+                index=1,
+                format_func=lambda t: {"A": "A — High priority", "B": "B — Medium priority", "C": "C — Low priority"}.get(t, t),
+            )
+        with crm_col2:
+            ac_score = st.slider("Initial Score (1–10)", min_value=1, max_value=10, value=5)
+        with crm_col3:
+            ac_assigned = st.selectbox(
+                "Assign to",
+                _dynamic_member_names,
+                index=0,
+            )
+
+        ac_notes = st.text_area(
+            "Notes (context, how you met, what was discussed)",
+            placeholder="Met at MedHacks Toronto. They mentioned wanting to reduce phone calls…",
+            max_chars=1000,
+            height=100,
+        )
+
+        submitted = st.form_submit_button("Add to CRM", type="primary", use_container_width=True)
+
+    if submitted:
+        if not ac_name.strip():
+            st.error("Institution name is required.")
+        else:
+            new_id = add_prospect({
+                "name":             ac_name.strip(),
+                "inst_type":        ac_type,
+                "city":             ac_city.strip(),
+                "province":         ac_province,
+                "country":          ac_country,
+                "website":          ac_website.strip(),
+                "phone":            ac_phone.strip(),
+                "emr_system":       ac_emr.strip(),
+                "tier":             ac_tier,
+                "composite_score":  ac_score,
+                "assigned_to":      ac_assigned,
+                "contact_notes":    ac_notes.strip(),
+                "decision_maker_name":     ac_dm_name.strip(),
+                "decision_maker_title":    ac_dm_title.strip(),
+                "decision_maker_email":    ac_dm_email.strip(),
+                "decision_maker_phone":    ac_dm_phone.strip(),
+                "decision_maker_linkedin": ac_dm_linkedin.strip(),
+            })
+            if new_id:
+                log_activity(
+                    actor_email=email, actor_name=name,
+                    action_type="prospect_added", entity_type="prospect",
+                    entity_id=new_id, entity_name=ac_name.strip(),
+                    details={"tier": ac_tier, "type": ac_type, "city": ac_city},
+                )
+                st.success(f"✅ **{ac_name.strip()}** added to CRM as Tier {ac_tier}.")
+                st.info("Find them in the Tier tabs above. Run Institution Research and DM Research from their Full Profile.")

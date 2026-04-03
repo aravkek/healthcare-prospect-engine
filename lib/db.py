@@ -134,6 +134,51 @@ def update_prospect(prospect_id: str, updates: dict) -> bool:
         return False
 
 
+def add_prospect(data: dict) -> str | None:
+    """
+    Insert a new prospect row manually. Returns the new row's ID, or None on failure.
+    Clears the load_prospects cache so the contact appears immediately.
+    """
+    client = get_client()
+    if client is None:
+        st.error("Database not connected.")
+        return None
+    try:
+        tier_to_rank = {"A": 1, "B": 2, "C": 3}
+        tier = (data.get("tier") or "B").upper()
+        row = {
+            "name":             (data.get("name") or "").strip(),
+            "inst_type":        data.get("inst_type") or "clinic",
+            "city":             (data.get("city") or "").strip(),
+            "province":         (data.get("province") or "").strip(),
+            "country":          data.get("country") or "CA",
+            "website":          (data.get("website") or "").strip(),
+            "phone":            (data.get("phone") or "").strip(),
+            "emr_system":       (data.get("emr_system") or "").strip(),
+            "status":           "not_contacted",
+            "priority_rank":    tier_to_rank.get(tier, 2),
+            "composite_score":  int(data.get("composite_score") or 5),
+            "tier":             tier,
+            "contact_notes":    (data.get("contact_notes") or "").strip(),
+            "decision_maker_name":     (data.get("decision_maker_name") or "").strip(),
+            "decision_maker_title":    (data.get("decision_maker_title") or "").strip(),
+            "decision_maker_email":    (data.get("decision_maker_email") or "").strip(),
+            "decision_maker_phone":    (data.get("decision_maker_phone") or "").strip(),
+            "decision_maker_linkedin": (data.get("decision_maker_linkedin") or "").strip(),
+            "assigned_to":      data.get("assigned_to") or "Unassigned",
+            "manually_added":   True,
+        }
+        # Drop empty strings so DB defaults apply
+        row = {k: v for k, v in row.items() if v not in ("", None)}
+        result = client.table("prospects").insert(row).execute()
+        new_id = (result.data or [{}])[0].get("id")
+        load_prospects.clear()
+        return new_id
+    except Exception as e:
+        st.error(f"Failed to add contact: {e}")
+        return None
+
+
 # ─── Activity Log ────────────────────────────────────────────────────────────
 
 def log_activity(
