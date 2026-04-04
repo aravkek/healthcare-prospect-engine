@@ -41,13 +41,6 @@ dept = get_department(email)
 
 OPS_AMBER = DEPT_COLORS["operations"]  # #F59E0B
 
-# ─── Access control ──────────────────────────────────────────────────────────
-
-if dept not in ("operations", "leadership") and not admin:
-    st.error("This page is for the Operations team.")
-    st.page_link("medport_dashboard.py", label="Back to Home", icon="🏠")
-    st.stop()
-
 # ─── Sidebar ─────────────────────────────────────────────────────────────────
 
 with st.sidebar:

@@ -47,26 +47,6 @@ name, email = check_auth()
 admin = is_admin(email)
 dept = get_department(email)
 
-# ─── Access control ───────────────────────────────────────────────────────────
-
-if dept not in ("marketing", "leadership") and not admin:
-    st.markdown(
-        f"""
-        <div style="padding:2rem;background:#1e293b;border-radius:1rem;
-          border-left:4px solid #ef4444;margin-top:2rem;max-width:560px;">
-          <div style="font-size:1.1rem;font-weight:700;color:#ef4444;margin-bottom:0.5rem;">
-            Access Denied
-          </div>
-          <div style="font-size:0.9rem;color:#94a3b8;">
-            The Marketing Hub is only available to the marketing team.
-            Contact Arav if you believe this is an error.
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.stop()
-
 # ─── Sidebar ─────────────────────────────────────────────────────────────────
 
 MARKETING_COLOR = DEPT_COLORS["marketing"]

@@ -38,13 +38,6 @@ dept = get_department(email)
 
 TECH_PURPLE = DEPT_COLORS["tech"]  # #8B5CF6
 
-# ─── Access control ──────────────────────────────────────────────────────────
-
-if dept not in ("tech", "leadership") and not admin:
-    st.error("This page is for the Tech team.")
-    st.page_link("medport_dashboard.py", label="Back to Home", icon="🏠")
-    st.stop()
-
 # ─── Sidebar ─────────────────────────────────────────────────────────────────
 
 with st.sidebar:
