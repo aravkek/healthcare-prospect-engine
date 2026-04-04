@@ -282,14 +282,15 @@ def render_institution_card(row: pd.Series, queue_mode: bool = False, key_prefix
             st.caption("Add their email and phone in Full Profile →")
 
         # DM personality brief (from AI research)
-        if dm_research:
+        dm_research_str = str(dm_research) if dm_research else ""
+        if dm_research_str:
             # Extract just the key approach sections — first 600 chars or up to a section break
-            _brief = dm_research[:700].strip()
+            _brief = dm_research_str[:700].strip()
             # Try to find the approach/hooks section
             for _marker in ["HOW TO REACH", "HOW TO WRITE", "WHAT RESONATES", "PERSONALIZATION HOOKS", "SUGGESTED EMAIL OPENER"]:
-                _idx = dm_research.upper().find(_marker)
+                _idx = dm_research_str.upper().find(_marker)
                 if _idx != -1:
-                    _brief = dm_research[_idx:_idx + 600].strip()
+                    _brief = dm_research_str[_idx:_idx + 600].strip()
                     break
             st.markdown(
                 f'<div style="margin-top:0.5rem;padding:0.5rem 0.75rem;background:#fff;'
