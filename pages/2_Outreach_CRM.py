@@ -39,6 +39,13 @@ inject_css()
 name, email = check_auth()
 admin = is_admin(email)
 
+# ─── Apply any pending preset BEFORE widgets render ──────────────────────────
+# Preset buttons can't set widget-bound keys directly in newer Streamlit.
+# Instead they store the desired values in _crm_preset, which we consume here.
+if "_crm_preset" in st.session_state:
+    for _pk, _pv in st.session_state.pop("_crm_preset").items():
+        st.session_state[_pk] = _pv
+
 # ─── Dynamic team members ────────────────────────────────────────────────────
 _team_members_dynamic = get_team_members()
 _dynamic_member_names = ["Unassigned"] + [m["name"] for m in _team_members_dynamic]
@@ -677,8 +684,7 @@ _PRESETS = [
 for _pi, (_plabel, _pstate) in enumerate(_PRESETS):
     with qf_cols[_pi]:
         if st.button(_plabel, key=f"preset_{_pi}", use_container_width=True):
-            for _k, _v in _pstate.items():
-                st.session_state[_k] = _v
+            st.session_state["_crm_preset"] = _pstate
             st.rerun()
 
 st.markdown("")
