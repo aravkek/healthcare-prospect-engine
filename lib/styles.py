@@ -991,6 +991,100 @@ hr.subtle {{ border: none; border-top: 1px solid #e2e8f0; margin: 0.5rem 0; }}
 ::-webkit-scrollbar-thumb {{ background: #cbd5e1; border-radius: 999px; }}
 ::-webkit-scrollbar-thumb:hover {{ background: #94a3b8; }}
 
+/* ── Mobile responsiveness ── */
+@media (max-width: 768px) {{
+  /* Tighten main padding on small screens */
+  .main .block-container {{
+    padding-top: 1rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    max-width: 100% !important;
+  }}
+
+  /* Stack columns vertically */
+  [data-testid="stHorizontalBlock"] {{
+    flex-wrap: wrap !important;
+  }}
+  [data-testid="stHorizontalBlock"] > [data-testid="stVerticalBlock"] {{
+    min-width: 100% !important;
+    width: 100% !important;
+  }}
+
+  /* Stat cards — smaller on mobile */
+  .stat-card {{
+    padding: 1rem 1.1rem !important;
+    border-radius: 14px !important;
+  }}
+  .stat-card .stat-value {{
+    font-size: 1.875rem !important;
+  }}
+
+  /* Member cards — 2-column grid on mobile */
+  .member-card {{
+    padding: 1rem 0.75rem !important;
+  }}
+  .member-avatar {{
+    width: 42px !important;
+    height: 42px !important;
+    font-size: 0.875rem !important;
+  }}
+
+  /* Page title — smaller */
+  .page-title {{
+    font-size: 1.5rem !important;
+  }}
+
+  /* Tabs — smaller text, scrollable */
+  .stTabs [data-baseweb="tab-list"] {{
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+  }}
+  .stTabs [data-baseweb="tab"] {{
+    font-size: 0.8rem !important;
+    padding: 0.5rem 0.7rem !important;
+    white-space: nowrap !important;
+  }}
+
+  /* Buttons — always full width on mobile */
+  .stButton > button {{
+    width: 100% !important;
+    font-size: 0.875rem !important;
+    padding: 0.5rem 1rem !important;
+  }}
+
+  /* Hide sidebar collapse button area padding */
+  section[data-testid="stSidebar"] {{
+    min-width: 260px !important;
+  }}
+
+  /* Inputs — full width */
+  .stTextInput, .stSelectbox, .stTextArea {{
+    width: 100% !important;
+  }}
+
+  /* Prospect cards — reduce padding */
+  .inst-header {{ font-size: 0.9375rem !important; }}
+  .inst-meta {{ font-size: 0.75rem !important; }}
+
+  /* Funnel — scrollable on mobile */
+  .funnel-row {{ overflow-x: auto !important; }}
+
+  /* Task cards */
+  .task-card {{
+    padding: 0.75rem 1rem !important;
+    border-radius: 10px !important;
+  }}
+
+  /* Chat bubbles — wider on mobile */
+  .chat-msg-user, .chat-msg-assistant {{
+    max-width: 95% !important;
+  }}
+
+  /* Hide decorative ::after orbs on mobile (performance) */
+  .stat-card::after {{ display: none !important; }}
+  .member-card::before {{ display: none !important; }}
+}}
+
 /* ── Streamlit expander ── */
 [data-testid="stExpander"] {{
   border: 1px solid rgba(0,0,0,0.07) !important;

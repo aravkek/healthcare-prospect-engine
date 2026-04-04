@@ -125,10 +125,20 @@ def render_institution_card(row: pd.Series, queue_mode: bool = False, key_prefix
     notes = row.get("research_notes", "")
     risk = row.get("competitor_risk", "none")
     rank = row.get("priority_rank", 3)
-    inno = int(row.get("innovation_score", 0) or 0)
-    access = int(row.get("accessibility_score", 0) or 0)
-    fit = int(row.get("fit_score", 0) or 0)
-    startup_rx = int(row.get("startup_receptiveness", 0) or 0)
+    def _int(val):
+        """Safe int coercion — handles NaN, None, empty string."""
+        try:
+            import math
+            if val is None or (isinstance(val, float) and math.isnan(val)):
+                return 0
+            return int(val) if val else 0
+        except (ValueError, TypeError):
+            return 0
+
+    inno = _int(row.get("innovation_score"))
+    access = _int(row.get("accessibility_score"))
+    fit = _int(row.get("fit_score"))
+    startup_rx = _int(row.get("startup_receptiveness"))
     emr = row.get("emr_system", "")
     patient_vol = row.get("patient_volume", "")
     ai_tools = row.get("existing_ai_tools", "")
@@ -137,7 +147,7 @@ def render_institution_card(row: pd.Series, queue_mode: bool = False, key_prefix
     current_status = row.get("status", "not_contacted")
     current_assigned = row.get("assigned_to", "Unassigned") or "Unassigned"
     current_notes = row.get("contact_notes", "") or ""
-    outreach_count = int(row.get("outreach_count", 0) or 0)
+    outreach_count = _int(row.get("outreach_count"))
 
     location = f"{country_flag(country)} {city}, {country}" if city else country_flag(country)
     border_color = STATUS_COLORS.get(current_status, MEDPORT_BLUE)
