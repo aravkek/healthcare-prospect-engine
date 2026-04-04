@@ -324,10 +324,22 @@ section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"]:hover {{
   line-height: 1.6;
 }}
 
-/* ── Hide Streamlit chrome ── */
-footer {{ visibility: hidden; }}
+/* ── Hide ALL Streamlit chrome — manage app, footer, toolbar, badges ── */
+footer {{ visibility: hidden !important; display: none !important; }}
+footer * {{ visibility: hidden !important; display: none !important; }}
 [data-testid="stDecoration"] {{ display: none !important; }}
-[data-testid="stToolbar"] {{ visibility: hidden !important; }}
+[data-testid="stToolbar"] {{ display: none !important; }}
+[data-testid="stToolbarActions"] {{ display: none !important; }}
+[data-testid="stStatusWidget"] {{ display: none !important; }}
+[data-testid="manage-app-button"] {{ display: none !important; }}
+#MainMenu {{ display: none !important; }}
+.viewerBadge_container__1QSob {{ display: none !important; }}
+.styles_viewerBadge__1yB5_ {{ display: none !important; }}
+/* Streamlit Cloud "Manage app" bottom-right pill */
+[class*="toolbar"] {{ display: none !important; }}
+div[class*="reportview"] div[class*="StatusWidget"] {{ display: none !important; }}
+
+/* Keep sidebar collapse button always visible */
 [data-testid="stSidebarCollapsedControl"] {{ display: flex !important; visibility: visible !important; opacity: 1 !important; }}
 /* Remove Streamlit top padding gap */
 [data-testid="stAppViewContainer"] > section:first-child {{ padding-top: 0 !important; }}
